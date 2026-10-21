@@ -8,9 +8,9 @@ A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by thir
 
 - Import voucher codes from a CSV file as a batch, with the partner, face value, cost, validity period and redemption instructions.
 - Link each face value to a Medusa product variant, and track the codes available for sale.
-- Allocate codes to an order after payment and deliver them to the customer through the Notification module (email first, LINE later).
+- Allocate codes to an order after payment and deliver them to the customer through the Notification module (email first, LINE later) as text and as a QR code.
 - Admin pages to import, review and replace codes, with stock and expiry alerts.
-- Store API for signed-in customers to view the codes they bought.
+- Store API for signed-in customers to view the codes they bought, with the QR code.
 - Codes are encrypted at rest; an encryption key is required in the plugin options.
 
 This is not a gift card, store credit or discount code plugin: Medusa already provides those through its Loyalty plugin and Promotion module.

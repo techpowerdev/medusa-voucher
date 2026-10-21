@@ -25,12 +25,16 @@ A product variant sold in the store whose purchase delivers Vouchers of one Part
 _Avoid_: Voucher SKU, voucher item
 
 **Validity period**:
-The span of dates during which the Partner honours a Voucher, from its valid-from date to its valid-until date. Either end can be open.
+The span of dates during which the Partner honours a Voucher, from its valid-from date to its valid-until date. Either end can be open. A Voucher can be sold before its Validity period starts.
 _Avoid_: Expiry date, usable dates, active dates
 
 **PIN**:
 A second secret some Partners require together with the Voucher's code in order to redeem it.
 _Avoid_: Password, security code
+
+**QR code**:
+An image that encodes a Voucher's code alone, never its PIN, so it can be scanned instead of typed. It is generated from the code each time it is shown and is delivered together with the code text for every Voucher.
+_Avoid_: Barcode, QR image
 
 **Redemption instructions**:
 The Partner's directions for using a Voucher, included when it is delivered. They apply to a whole Voucher batch.
@@ -55,7 +59,7 @@ A Voucher assigned to an order but not yet confirmed as received by the customer
 _Avoid_: Reserved, sold
 
 **Delivery**:
-Sending the Voucher code of an Allocation to the customer through a channel. Delivery can fail and be retried.
+Sending the Voucher code of an Allocation to the customer through a channel, as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried.
 _Avoid_: Dispatch, fulfilment, shipment
 
 **Delivered**:
@@ -75,7 +79,7 @@ Voiding a Delivered Voucher that did not work and delivering a new Voucher from 
 _Avoid_: Reissue, swap, refund
 
 **Minimum remaining validity**:
-The shortest time left before the end of its Validity period for which a Voucher may still be sold, so customers receive Vouchers they have time to use.
+The shortest time left, counted from the later of today and the start of its Validity period until the end of the Validity period, for which a Voucher may still be sold, so customers receive Vouchers they have time to use.
 _Avoid_: Shelf life, grace period
 
 **Allocation failure**:
