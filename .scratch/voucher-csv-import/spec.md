@@ -1,4 +1,4 @@
-Status: implemented (written retroactively; code in PR #4)
+Status: implemented (written retroactively; code in PR #4). To be changed by the Voucher product spec: a batch will be imported against a Voucher product, which carries the Face value and currency; the Partner field is removed because the Medusa product already says whose voucher it is.
 
 # Import Vouchers from a CSV file
 
@@ -8,11 +8,11 @@ The store buys Vouchers from a Partner in bulk, often thousands at a time, as a 
 
 ## Solution
 
-An operator uploads the file's text together with the Voucher batch details (Partner, Voucher product, Face value, currency, purchase date and cost, Redemption instructions). The system checks the whole file first. If every row is valid, it creates the Voucher batch and all its Vouchers; if anything is wrong it creates nothing and lists every problem by line number, so the file can be fixed in one pass. Dates are plain calendar dates and count as whole days.
+An operator uploads the file's text together with the Voucher batch details (Voucher product, purchase date and cost, reference, Redemption instructions; today's code still also asks for Partner, Face value and currency until the Voucher product spec is built). The system checks the whole file first. If every row is valid, it creates the Voucher batch and all its Vouchers; if anything is wrong it creates nothing and lists every problem by line number, so the file can be fixed in one pass. Dates are plain calendar dates and count as whole days.
 
 ## User Stories
 
-1. As an operator, I want to import a Partner's file as one Voucher batch, so that all its Vouchers share the Partner, Face value, cost and purchase date.
+1. As an operator, I want to import a Partner's file as one Voucher batch, so that all its Vouchers share the Voucher product, cost and purchase date.
 2. As an operator, I want each batch tied to an existing Voucher product, so that the Pool of that product is the Vouchers I imported.
 3. As an operator, I want the import refused when the Voucher product does not exist, so that I never create Vouchers nobody can sell.
 4. As an operator, I want the file to need only a `code` column, so that Partners without PINs or dates are easy to import.
