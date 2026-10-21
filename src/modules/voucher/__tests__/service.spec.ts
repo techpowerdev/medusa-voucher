@@ -31,7 +31,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
   moduleModels: [Voucher, VoucherBatch, VoucherAllocation, AllocationFailure],
   resolve: "./src/modules/voucher",
-  moduleOptions: { encryptionKey: "k".repeat(32) },
+  moduleOptions: { encryptionKey: "Xk3vQ9mZ2tLw7RfB5nYc8HdJ1sGpA4uE" },
   testSuite: ({ service }) => {
     describe("VoucherModuleService", () => {
       it("imports a batch of vouchers that start as available", async () => {
@@ -176,6 +176,49 @@ moduleIntegrationTestRunner<VoucherModuleService>({
 
           expect(voucher.variant_id).toBe("variant_500")
           expect(voucher.batch_id).toBe(batch.id)
+        })
+
+        it("imports thousands of codes in one call", async () => {
+          const batch = await createBatch()
+          const vouchers = Array.from({ length: 2500 }, (_, i) => ({
+            code: `BULK-${String(i).padStart(6, "0")}-CODE`,
+          }))
+
+          const created = await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers,
+          })
+
+          expect(created).toHaveLength(2500)
+          expect(await service.listVouchers({}, { take: null })).toHaveLength(2500)
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [{ code: "FRESH-CODE-0001" }, vouchers[2400]],
+            })
+          ).rejects.toThrow("Codes already stored at positions: 2")
+        })
+
+        it("lets exactly one of two concurrent imports of the same code win", async () => {
+          const batch = await createBatch()
+          const runImport = () =>
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [{ code: "RACE-CODE-0001" }],
+            })
+
+          const results = await Promise.allSettled([runImport(), runImport()])
+          const failures = results.filter((r) => r.status === "rejected")
+
+          expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1)
+          expect(failures).toHaveLength(1)
+          const { type, message } = (failures[0] as PromiseRejectedResult).reason
+
+          expect(type).toBe("invalid_data")
+          expect(message).toMatch(/already stored|stored by another import/)
+          expect(message).not.toContain("code_hash")
+          expect(await service.listVouchers({})).toHaveLength(1)
         })
 
         it("rejects a validity period that ends before it starts", async () => {

@@ -11,6 +11,39 @@ import {
   VoucherCrypto,
 } from "./utils/crypto"
 
+// Hashes are looked up in chunks so a very large import never exceeds the database's
+// limit on query parameters.
+const LOOKUP_CHUNK_SIZE = 1000
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = []
+
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size))
+  }
+
+  return chunks
+}
+
+// Medusa turns a database unique violation into a MedusaError of type invalid_data whose
+// message ends with "already exists." and names the column and its value (here, the code
+// hash). The raw driver errors are also recognised in case that mapping changes.
+function isUniqueViolation(error: unknown): boolean {
+  const { name, code, type, message } = (error ?? {}) as {
+    name?: string
+    code?: string
+    type?: string
+    message?: string
+  }
+
+  return (
+    name === "UniqueConstraintViolationException" ||
+    code === "23505" ||
+    (type === MedusaError.Types.INVALID_DATA &&
+      /already exists\.?$/i.test(message ?? ""))
+  )
+}
+
 export type VoucherCodeInput = {
   code: string
   pin?: string | null
@@ -102,13 +135,19 @@ class VoucherModuleService extends MedusaService({
       )
     }
 
-    const existing = await this.listVouchers(
-      { code_hash: [...positionByHash.keys()] },
-      { select: ["id", "code_hash"] }
-    )
+    const stored: { code_hash: string }[] = []
 
-    if (existing.length) {
-      const positions = existing
+    for (const hashes of chunk([...positionByHash.keys()], LOOKUP_CHUNK_SIZE)) {
+      stored.push(
+        ...(await this.listVouchers(
+          { code_hash: hashes },
+          { select: ["id", "code_hash"], take: null }
+        ))
+      )
+    }
+
+    if (stored.length) {
+      const positions = stored
         .map((voucher) => positionByHash.get(voucher.code_hash))
         .sort((a, b) => Number(a) - Number(b))
 
@@ -118,7 +157,19 @@ class VoucherModuleService extends MedusaService({
       )
     }
 
-    return await this.createVouchers(rows)
+    try {
+      return await this.createVouchers(rows)
+    } catch (error) {
+      // Another import stored one of these codes between the check above and this insert.
+      if (isUniqueViolation(error)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          "Some codes were stored by another import at the same time. Nothing was imported; try again."
+        )
+      }
+
+      throw error
+    }
   }
 
   /** Decrypts the code and PIN of a voucher. Callers decide who may see them. */
