@@ -57,6 +57,14 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Keep `exports` in `package.json` as generated; they expose `workflows`, `modules/*`, `providers/*` and `admin`.
 - `exports["./workflows"]` points to `src/workflows/index.ts`, which does not exist yet. When adding the first workflow, create that file and re-export every workflow (and hooks) from it, otherwise `@khumkha/medusa-voucher/workflows` cannot be imported.
 
+## Branching
+
+- `main`: released code only. It changes by merging `develop` for a release (then tag the version).
+- `develop`: integration branch. All work lands here through pull requests.
+- `feature/<name>`, `fix/<name>`, `chore/<name>`: short-lived branches created from `develop` and merged back into `develop` by pull request.
+- CI runs on pull requests and on pushes to `main` and `develop`. The `update-medusa.yml` workflow opens its pull request against `develop`.
+- Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `ci:`).
+
 ## Using this repo as a template for a new plugin
 
 1. Copy the project (without `node_modules`, `.medusa`, `.git`, `.env*`), then `git init`.
@@ -66,4 +74,4 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 5. `nvm use && pnpm install`, copy the env templates (see Environment), then run `pnpm lint && pnpm build && pnpm test:integration:modules && pnpm test:integration:http` (the HTTP test needs migrations, so run `pnpm db:generate` first).
 6. After designing the data models, run `pnpm db:generate` and commit the migrations.
 7. Review `skills-lock.json` / `.agents/skills/`: keep only the skills the new plugin needs, and add any others with `pnpm dlx skills add`.
-8. Reset `version` in `package.json` and make the first commit.
+8. Reset `version` in `package.json`, make the first commit on `main`, then create `develop` from it (see Branching) and set it as the default branch on GitHub.
