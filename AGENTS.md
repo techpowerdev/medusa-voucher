@@ -77,6 +77,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - `feature/<name>`, `fix/<name>`, `chore/<name>`: short-lived branches created from `develop` and merged back into `develop` by pull request.
 - CI runs on pull requests and on pushes to `main` and `develop`. The `update-medusa.yml` workflow opens its pull request against `develop`.
 - Commit messages follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`, `ci:`).
+- Pull requests and commit messages are always written in Thai (PR title and description; commit subject and body). Keep the Conventional Commits prefix, code identifiers, commands and file paths in English.
 
 ## Using this repo as a template for a new plugin
 
