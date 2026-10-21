@@ -13,6 +13,7 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
 - `pnpm build` — `medusa plugin:build` (output in `.medusa/server`, git-ignored)
 - `pnpm dev` — `medusa plugin:develop` (watch + push to the local registry; run the host app's dev server in another terminal)
 - `pnpm lint` — `medusa lint`
+- `pnpm typecheck` — type-check `src/` **including tests** (`tsconfig.json` excludes tests and Jest runs through SWC, which does not check types)
 - `pnpm test:unit` — unit tests, `src/**/__tests__/**/*.unit.spec.ts` (no database)
 - `pnpm test:integration:modules` — module integration tests, `src/modules/*/__tests__/` (needs PostgreSQL)
 - `pnpm test:integration:http` — builds the plugin, then runs `integration-tests/http/*.spec.ts` against a real Medusa app that loads the plugin from `.medusa/server` (needs PostgreSQL and generated migrations)
@@ -38,6 +39,17 @@ Per the Medusa docs, a plugin project only needs its `@medusajs/*` dependencies 
 4. Verify: `pnpm lint && pnpm build && pnpm test:unit && pnpm test:integration:modules && pnpm test:integration:http` (start PostgreSQL first). Minor releases can contain breaking changes; look for `@deprecated` warnings and read the release notes.
 5. Update the minimum version in `README.md` ("Compatibility"). The manually triggered `update-medusa.yml` workflow can open this PR for you; review it against these steps.
 
+## Rules for AI agents
+
+These come from mistakes already made in this repo. Follow them every time.
+
+1. **Check how Medusa does it before writing Medusa code.** In this order: the project skills in `.agents/skills/` (and their `reference/` files), then the source of Medusa's own modules in `node_modules/@medusajs/*` (for example how `order` or `promotion` define models and use `model.enum`), then https://docs.medusajs.com/llms.txt. Copy the pattern Medusa uses; do not invent one that merely compiles.
+2. **Verify, do not assume.** Run the code or the type-checker to confirm a claim before stating it, and say plainly what was not verified. An assumption that something "cannot be done" must be tested first (the HTTP integration test was once dropped on an untested assumption and later worked fine).
+3. **Run the full check after every change to code or models:** `pnpm lint && pnpm typecheck && pnpm build`, then the tests that apply (PostgreSQL required). After changing a data model also run `pnpm db:generate` and commit the migration; a second run must report no new migration.
+4. **Status and type values are TypeScript string enums** passed to `model.enum(...)` (see Conventions). Never use `as const` arrays or string literals for them.
+5. **Write pull requests and commit messages in Thai**, keeping the Conventional Commits prefix, identifiers, commands and paths in English.
+6. **Never commit, push, merge, or change GitHub settings** unless the user asks for that action in the current conversation.
+
 ## Layout
 
 Source lives in `src/`; each directory maps to a Medusa resource type and is registered automatically in the host app:
@@ -51,6 +63,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Use the terms in `GLOSSARY.md` for models, API fields, events and docs (a code is a **Voucher**, an import is a **Voucher batch**, and so on) and avoid the listed synonyms. Update the glossary when a term changes; record hard-to-reverse decisions as ADRs in `docs/adr/`.
 - Medusa v2 only (`@medusajs/*` pinned to the same version in dev and peer dependencies — keep them in sync when upgrading).
 - Business logic belongs in workflows and module services; API routes stay thin.
+- Define status/type values as TypeScript string enums (see `src/modules/voucher/constants.ts`) and pass the enum straight to `model.enum(...)` with `.default(Enum.VALUE)`, the way Medusa's own modules do. Do not use `as const` arrays: they are readonly and `model.enum` rejects them.
 - Imports inside the plugin must be relative (never `@khumkha/medusa-voucher/...`).
 - Project skills live in `.agents/skills/` (`building-with-medusa`, `building-admin-dashboard-customizations`, `building-storefronts`; symlinked into `.claude/skills/`). Load the matching one before any Medusa backend or admin UI work, and `building-storefronts` when calling this plugin's store API routes from a storefront. Manage them with `pnpm dlx skills update` / `list` (lock file: `skills-lock.json`).
 - Medusa docs for LLMs: https://docs.medusajs.com/llms.txt — consult it instead of guessing Medusa v2 APIs.

@@ -1,5 +1,6 @@
 import path from "path"
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { VoucherStatus } from "../../src/modules/voucher/constants"
 import { VOUCHER_MODULE } from "../../src/modules/voucher"
 import VoucherModuleService from "../../src/modules/voucher/service"
 
@@ -13,9 +14,23 @@ medusaIntegrationTestRunner({
         const service: VoucherModuleService =
           getContainer().resolve(VOUCHER_MODULE)
 
-        const voucher = await service.createVouchers({ code: "PLUGIN-LOADED" })
+        const batch = await service.createVoucherBatches({
+          partner: "Example Partner",
+          variant_id: "variant_100",
+          face_value: 100,
+          currency_code: "thb",
+          purchased_at: new Date(),
+        })
 
-        expect(voucher.code).toBe("PLUGIN-LOADED")
+        const voucher = await service.createVouchers({
+          code_encrypted: "encrypted",
+          code_hash: "hash",
+          code_hint: "00",
+          variant_id: "variant_100",
+          batch_id: batch.id,
+        })
+
+        expect(voucher.status).toBe(VoucherStatus.AVAILABLE)
       })
     })
   },

@@ -5,7 +5,7 @@ A Medusa plugin for reselling vouchers issued by third-party partners. The store
 ## Language
 
 **Voucher**:
-A single redeemable code issued by a Partner, with a face value and an expiry date, that the store sells and delivers to a customer.
+A single redeemable code issued by a Partner, with a face value and a Validity period, that the store sells and delivers to a customer.
 _Avoid_: Coupon, gift card, promo code, discount code
 
 **Partner**:
@@ -23,6 +23,22 @@ _Avoid_: Denomination, price
 **Voucher product**:
 A product variant sold in the store whose purchase delivers Vouchers of one Partner and one Face value.
 _Avoid_: Voucher SKU, voucher item
+
+**Validity period**:
+The span of dates during which the Partner honours a Voucher, from its valid-from date to its valid-until date. Either end can be open. A Voucher can be sold before its Validity period starts.
+_Avoid_: Expiry date, usable dates, active dates
+
+**PIN**:
+A second secret some Partners require together with the Voucher's code in order to redeem it.
+_Avoid_: Password, security code
+
+**QR code**:
+An image that encodes a Voucher's code alone, never its PIN, so it can be scanned instead of typed. It is generated from the code each time it is shown and is delivered together with the code text for every Voucher.
+_Avoid_: Barcode, QR image
+
+**Redemption instructions**:
+The Partner's directions for using a Voucher, included when it is delivered. They apply to a whole Voucher batch.
+_Avoid_: Terms, how-to
 
 **Pool**:
 The Vouchers that exist for one Voucher product, in any status.
@@ -43,7 +59,7 @@ A Voucher assigned to an order but not yet confirmed as received by the customer
 _Avoid_: Reserved, sold
 
 **Delivery**:
-Sending the Voucher code of an Allocation to the customer through a channel. Delivery can fail and be retried.
+Sending the Voucher code of an Allocation to the customer through a channel, as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried.
 _Avoid_: Dispatch, fulfilment, shipment
 
 **Delivered**:
@@ -51,11 +67,11 @@ A Voucher whose code has been sent to the customer successfully.
 _Avoid_: Sent, redeemed
 
 **Expired**:
-A Voucher past its expiry date, which can no longer be sold or honoured.
+A Voucher past the end of its Validity period, which can no longer be sold or honoured.
 _Avoid_: Stale, dead
 
 **Void**:
-A Voucher withdrawn from use because it is invalid or has been replaced.
+A Voucher withdrawn from use because it is invalid or has been replaced, recorded with who withdrew it, when and why.
 _Avoid_: Cancelled, deleted, invalid
 
 **Replacement**:
@@ -63,7 +79,7 @@ Voiding a Delivered Voucher that did not work and delivering a new Voucher from 
 _Avoid_: Reissue, swap, refund
 
 **Minimum remaining validity**:
-The shortest time left before expiry for which a Voucher may still be sold, so customers receive Vouchers they have time to use.
+The shortest time left, counted from the later of today and the start of its Validity period until the end of the Validity period, for which a Voucher may still be sold, so customers receive Vouchers they have time to use.
 _Avoid_: Shelf life, grace period
 
 **Allocation failure**:
@@ -77,7 +93,7 @@ A Pool whose Available Vouchers have fallen below a configured threshold.
 _Avoid_: Running out
 
 **Expiring soon**:
-A Voucher whose expiry date falls within a configured warning window.
+A Voucher whose Validity period ends within a configured warning window.
 _Avoid_: Near expiry
 
 ## Relationships
