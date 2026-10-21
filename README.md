@@ -39,6 +39,7 @@ module.exports = defineConfig({
       options: {
         encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
         timezone: "Asia/Bangkok", // optional; the default
+        minimumRemainingValidityDays: 0, // optional; the default (no minimum)
       },
     },
   ],
@@ -62,6 +63,14 @@ A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR
 - `POST /admin/voucher-products/:id` changes `face_value` or `currency_code`, only while the Voucher product has no Vouchers.
 
 The link between a Voucher product and its variant is a Medusa module link, so run `npx medusa db:migrate` in the host application to create its table.
+
+## Allocating vouchers
+
+`allocateVouchersToOrderWorkflow` (exported from `@khumkha/medusa-voucher/workflows`) takes an `order_id` and gives one Available Voucher to each purchased unit of the order's Voucher product lines, all or none for the order. Other lines are ignored. If a Voucher product does not have enough Vouchers, nothing is allocated for the order and an Allocation failure is recorded for each short line. It never decrypts a code and its result contains none.
+
+- A Voucher qualifies when it is Available, not expired, and has at least `minimumRemainingValidityDays` whole days of validity left, counted from the later of now and its `valid_from` instant. The default is 0 (no minimum); expired Vouchers are never allocated.
+- The Vouchers that end soonest go first; those that never expire go last.
+- This workflow is not started by anything yet and is not safe against two orders being allocated at the same moment; do not call it from a payment event until that is added.
 
 ## Importing vouchers
 

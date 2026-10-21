@@ -20,6 +20,8 @@ module.exports = defineConfig({
       resolve: path.resolve(__dirname, ".."),
       options: {
         encryptionKey: "test-only-key-for-integration-tests-0123456789",
+        // A Voucher needs at least this many days of validity left to be allocated.
+        minimumRemainingValidityDays: 7,
       },
     },
   ],

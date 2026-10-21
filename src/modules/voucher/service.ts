@@ -1,11 +1,27 @@
-import { MedusaError, MedusaService } from "@medusajs/framework/utils"
+import { Context } from "@medusajs/framework/types"
+import {
+  InjectManager,
+  InjectTransactionManager,
+  MedusaContext,
+  MedusaError,
+  MedusaService,
+} from "@medusajs/framework/utils"
+import { VoucherStatus } from "./constants"
 import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
 import VoucherBatch from "./models/voucher-batch"
 import VoucherProduct from "./models/voucher-product"
-import { VoucherCodeInput, VoucherModuleOptions } from "./types"
+import {
+  AllocatedVoucher,
+  AllocateVouchersInput,
+  AllocateVouchersResult,
+  AllocationShortfall,
+  VoucherCodeInput,
+  VoucherModuleOptions,
+} from "./types"
 import { parseVoucherCsv } from "./utils/parse-voucher-csv"
+import { hasEnoughValidityLeft } from "./utils/validity"
 import { DEFAULT_TIMEZONE } from "./utils/timezone"
 import {
   codeHint,
@@ -61,6 +77,7 @@ class VoucherModuleService extends MedusaService({
 }) {
   protected crypto_: VoucherCrypto
   protected timezone_: string
+  protected minimumRemainingValidityDays_: number
 
   constructor(container: Record<string, unknown>, options: VoucherModuleOptions) {
     // @ts-ignore
@@ -68,6 +85,7 @@ class VoucherModuleService extends MedusaService({
 
     this.crypto_ = createVoucherCrypto(options?.encryptionKey)
     this.timezone_ = options?.timezone ?? DEFAULT_TIMEZONE
+    this.minimumRemainingValidityDays_ = options?.minimumRemainingValidityDays ?? 0
   }
 
   /** Reads a vouchers CSV, turning its dates into whole days in the configured time zone. */
@@ -181,6 +199,138 @@ class VoucherModuleService extends MedusaService({
 
       throw error
     }
+  }
+
+  /**
+   * Allocates one Available Voucher to each purchased unit of the given lines, all or none:
+   * when any line cannot be covered nothing is allocated and an Allocation failure is
+   * recorded for each short line. Never decrypts a code.
+   */
+  @InjectManager()
+  async allocateVouchers(
+    input: AllocateVouchersInput,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<AllocateVouchersResult> {
+    return await this.allocateVouchers_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async allocateVouchers_(
+    input: AllocateVouchersInput,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<AllocateVouchersResult> {
+    const taken = new Set<string>()
+    const picks: { line: AllocateVouchersInput["lines"][number]; voucherIds: string[] }[] = []
+    const failures: AllocationShortfall[] = []
+
+    for (const line of input.lines) {
+      const found = await this.findEligibleVoucherIds_(
+        line.variant_id,
+        line.quantity,
+        taken,
+        sharedContext
+      )
+
+      if (found.length < line.quantity) {
+        failures.push({
+          order_line_item_id: line.order_line_item_id,
+          variant_id: line.variant_id,
+          requested: line.quantity,
+          available: found.length,
+        })
+      } else {
+        found.forEach((id) => taken.add(id))
+        picks.push({ line, voucherIds: found })
+      }
+    }
+
+    if (failures.length) {
+      await this.createAllocationFailures(
+        failures.map((failure) => ({
+          order_id: input.order_id,
+          order_line_item_id: failure.order_line_item_id,
+          variant_id: failure.variant_id,
+          quantity_requested: failure.requested,
+          quantity_available: failure.available,
+        })),
+        sharedContext
+      )
+
+      return { allocated: [], failures }
+    }
+
+    const rows = picks.flatMap(({ line, voucherIds }) =>
+      voucherIds.map((voucher_id, index) => ({
+        order_id: input.order_id,
+        order_line_item_id: line.order_line_item_id,
+        unit_index: index + 1,
+        customer_id: input.customer_id ?? null,
+        recipient_email: input.recipient_email ?? null,
+        voucher_id,
+      }))
+    )
+
+    await this.updateVouchers(
+      { selector: { id: rows.map((row) => row.voucher_id) }, data: { status: VoucherStatus.ALLOCATED } },
+      sharedContext
+    )
+    const created = await this.createVoucherAllocations(rows, sharedContext)
+
+    const allocated: AllocatedVoucher[] = created.map((allocation, index) => ({
+      allocation_id: allocation.id,
+      voucher_id: rows[index].voucher_id,
+      order_line_item_id: allocation.order_line_item_id,
+      unit_index: allocation.unit_index,
+    }))
+
+    return { allocated, failures: [] }
+  }
+
+  // The Vouchers of a variant that can be allocated now, best first: Available and not
+  // expired, the earliest valid-until first with those that never expire last.
+  @InjectTransactionManager()
+  protected async findEligibleVoucherIds_(
+    variantId: string,
+    quantity: number,
+    taken: Set<string>,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<string[]> {
+    const now = new Date()
+    const found: string[] = []
+    const PAGE_SIZE = 200
+
+    for (let skip = 0; found.length < quantity; skip += PAGE_SIZE) {
+      const page = await this.listVouchers(
+        {
+          variant_id: variantId,
+          status: VoucherStatus.AVAILABLE,
+          $or: [{ valid_until: null }, { valid_until: { $gt: now } }],
+        },
+        {
+          select: ["id", "valid_from", "valid_until"],
+          order: { valid_until: "ASC", created_at: "ASC" },
+          take: PAGE_SIZE,
+          skip,
+        },
+        sharedContext
+      )
+
+      if (!page.length) {
+        break
+      }
+
+      for (const voucher of page) {
+        if (
+          !taken.has(voucher.id) &&
+          found.length < quantity &&
+          hasEnoughValidityLeft(voucher, now, this.minimumRemainingValidityDays_)
+        ) {
+          found.push(voucher.id)
+        }
+      }
+    }
+
+    return found
   }
 
   /** Decrypts the code and PIN of a voucher. Callers decide who may see them. */

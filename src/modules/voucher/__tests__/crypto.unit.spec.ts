@@ -109,6 +109,15 @@ describe("voucher options loader", () => {
     await expect(run({ encryptionKey: KEY, timezone: "UTC" })).resolves.toBeUndefined()
   })
 
+  it("fails on a minimum remaining validity that is not a whole number of days", async () => {
+    for (const bad of [-1, 1.5, "7"]) {
+      await expect(run({ encryptionKey: KEY, minimumRemainingValidityDays: bad })).rejects.toThrow(
+        /minimumRemainingValidityDays/
+      )
+    }
+    await expect(run({ encryptionKey: KEY, minimumRemainingValidityDays: 30 })).resolves.toBeUndefined()
+  })
+
   it("passes with a valid key", async () => {
     await expect(run({ encryptionKey: KEY })).resolves.toBeUndefined()
   })

@@ -11,6 +11,12 @@ export type VoucherModuleOptions = {
    * instants when it changes.
    */
   timezone?: string
+  /**
+   * How many whole days of validity a Voucher must still have, counted from the later of
+   * now and its valid-from date, to be allocated to an order. Defaults to 0 (no minimum;
+   * expired Vouchers are never allocated either way).
+   */
+  minimumRemainingValidityDays?: number
 }
 
 export type VoucherCodeInput = {
@@ -22,4 +28,36 @@ export type VoucherCodeInput = {
   // Line of the source file (for example a CSV row) this voucher came from. When given,
   // errors name it instead of the position in the input.
   source_line?: number
+}
+
+export type AllocateVouchersLine = {
+  order_line_item_id: string
+  variant_id: string
+  quantity: number
+}
+
+export type AllocateVouchersInput = {
+  order_id: string
+  customer_id?: string | null
+  recipient_email?: string | null
+  lines: AllocateVouchersLine[]
+}
+
+export type AllocatedVoucher = {
+  allocation_id: string
+  voucher_id: string
+  order_line_item_id: string
+  unit_index: number
+}
+
+export type AllocationShortfall = {
+  order_line_item_id: string
+  variant_id: string
+  requested: number
+  available: number
+}
+
+export type AllocateVouchersResult = {
+  allocated: AllocatedVoucher[]
+  failures: AllocationShortfall[]
 }

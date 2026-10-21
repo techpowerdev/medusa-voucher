@@ -49,6 +49,12 @@ These come from mistakes already made in this repo. Follow them every time.
 4. **Status and type values are TypeScript string enums** passed to `model.enum(...)` (see Conventions). Never use `as const` arrays or string literals for them.
 5. **Write pull requests and commit messages in Thai**, keeping the Conventional Commits prefix, identifiers, commands and paths in English.
 6. **Never commit, push, merge, or change GitHub settings** unless the user asks for that action in the current conversation.
+7. **Spec first, then tickets, then code.** A new feature or behaviour change needs a spec and tickets in `.scratch/` that the user approved (skills: `grill-with-docs` → `to-spec` → `to-tickets`). Do not start from an idea in the conversation. If a project skill cannot be invoked, read its `SKILL.md` and follow it, and say that you did.
+8. **Real TDD, at agreed seams.** Before the first test, state the seams and get the user's confirmation. Write one test, run it, and see it fail for the expected reason before writing any code for it; write only what that test needs. If a test passes on its first run, say so in the report instead of presenting it as red → green. Expected values come from the spec or a worked example, never recomputed the way the code does (for example, do not assert a `code_hint` you guessed: it depends on the code's length). Changing a test to make it pass needs a stated reason.
+9. **Do not store what Medusa already knows.** Before adding a field or model, check whether a Medusa product, variant, order or metadata already says it (the Partner field was dropped because the Medusa product names it). Ask when unsure; removing a stored field later costs more than adding one.
+10. **Report faithfully.** Every handoff lists what was not verified, every deviation from the agreed design or seam, tests that never went red, and any step the user must take. Do not describe something as done or tested when it was only written.
+11. **No leftovers.** No `console.log` or debug markers in `src/` or `integration-tests/` (CI fails on them), no commented-out code, no files outside the task.
+12. **Say what you are doing during long runs.** Before a multi-step command sequence, state in one line what and why; do not go silent while builds and tests run.
 
 ## Agent skills
 
@@ -63,6 +69,18 @@ The default five triage roles (`needs-triage`, `needs-info`, `ready-for-agent`, 
 ### Domain docs
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Known pitfalls
+
+Each of these cost time here. All were checked against Medusa 2.21.2 or Node; recheck after upgrading.
+
+- **Shell:** the default shell resolves Node 20 and a global pnpm 11 that fails. Run `source ~/.nvm/nvm.sh && nvm use` before any `pnpm` command. Quote globs and URLs in zsh. BSD `sed` rejects GNU syntax: use the edit tools. `rm dir/*` leaves dotfiles such as `.snapshot-*.json`.
+- **Dates:** the data model has no date-only type, only `dateTime`. JavaScript turns `2026-02-30` into 2 March without an error, so validate calendar dates yourself. Periods are half-open: `valid_from <= now < valid_until`.
+- **Errors:** Medusa replaces the message of a `CONFLICT` error with a generic retry text; use `DUPLICATE_ERROR` (422) when the message matters, `INVALID_DATA` (400), `NOT_FOUND` (404). A database unique violation arrives as `invalid_data` with a message ending "already exists." and naming the value, so translate it before it can leak a hash.
+- **Orders:** the ordered quantity is `items.detail.quantity` in an order query; `items.quantity` is empty. The order of `order.items` is not guaranteed, so find a line by its variant.
+- **Links:** to know whether a variant has a Voucher product, query `product_variant` with `voucher_product.id`; a nested array filter on the link returned nothing.
+- **Services:** public service methods must be `async`; a method taking a `Context` needs `@InjectManager()` / `@InjectTransactionManager()` and `@MedusaContext()`, as Medusa's own modules do.
+- **Migrations:** see rule 3. A second `db:generate` reporting nothing does not prove the migrations are complete; the HTTP tests, which build the database from them, do.
 
 ## Layout
 
