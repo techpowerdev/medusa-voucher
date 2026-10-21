@@ -11,10 +11,8 @@ import VoucherModuleService from "../service"
 jest.setTimeout(60 * 1000)
 
 const batchInput = {
-  partner: "Example Partner",
+  voucher_product_id: "vprod_100",
   variant_id: "variant_100",
-  face_value: 100,
-  currency_code: "thb",
   unit_cost: 92,
   purchased_at: new Date("2026-01-01"),
   reference: "PO-1",
@@ -45,6 +43,23 @@ moduleIntegrationTestRunner<VoucherModuleService>({
         await expect(
           service.createVoucherProducts({ face_value: -5, currency_code: "thb" })
         ).rejects.toThrow()
+      })
+
+      it("keeps only what varies per purchase on a batch: no Partner, Face value or currency", async () => {
+        const batch = await service.createVoucherBatches(batchInput)
+        const stored = await service.retrieveVoucherBatch(batch.id)
+
+        expect(stored).toEqual(
+          expect.objectContaining({
+            voucher_product_id: "vprod_100",
+            variant_id: "variant_100",
+            reference: "PO-1",
+          })
+        )
+        expect(Number(stored.unit_cost)).toBe(92)
+        for (const removed of ["partner", "face_value", "currency_code"]) {
+          expect(stored).not.toHaveProperty(removed)
+        }
       })
 
       it("imports a batch of vouchers that start as available", async () => {

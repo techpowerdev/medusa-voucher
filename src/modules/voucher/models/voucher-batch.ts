@@ -1,12 +1,13 @@
 import { model } from "@medusajs/framework/utils"
 import Voucher from "./voucher"
 
+// A batch is one purchase for a Voucher product. The Face value and currency are the Voucher
+// product's and the Partner is not stored (ADR-0003). `variant_id` is the Voucher product's
+// variant at import time, copied so a Pool can be queried without a cross-module join.
 const VoucherBatch = model.define("voucher_batch", {
   id: model.id({ prefix: "vbatch" }).primaryKey(),
-  partner: model.text(),
+  voucher_product_id: model.text().index(),
   variant_id: model.text().index(),
-  face_value: model.bigNumber(),
-  currency_code: model.text(),
   unit_cost: model.bigNumber().nullable(),
   purchased_at: model.dateTime(),
   reference: model.text().nullable(),
