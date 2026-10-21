@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm build)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm test:unit)",
+      "Bash(pnpm test:integration:modules)",
+      "Bash(pnpm test:integration:http)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm exec tsc --noEmit:*)"
+    ]
+  }
+}
