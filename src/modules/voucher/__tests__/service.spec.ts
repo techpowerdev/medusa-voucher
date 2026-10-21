@@ -1,21 +1,96 @@
 import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { VOUCHER_MODULE } from ".."
-import VoucherModuleService from "../service"
+import AllocationFailure from "../models/allocation-failure"
 import Voucher from "../models/voucher"
+import VoucherAllocation from "../models/voucher-allocation"
+import VoucherBatch from "../models/voucher-batch"
+import VoucherModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
 
+const batchInput = {
+  partner: "Example Partner",
+  variant_id: "variant_100",
+  face_value: 100,
+  currency_code: "thb",
+  unit_cost: 92,
+  purchased_at: new Date("2026-01-01"),
+  reference: "PO-1",
+}
+
+const voucherInput = (n: number, batch_id: string) => ({
+  code_encrypted: `encrypted-${n}`,
+  code_hash: `hash-${n}`,
+  code_hint: `0${n}`,
+  variant_id: "variant_100",
+  batch_id,
+})
+
 moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
-  moduleModels: [Voucher],
+  moduleModels: [Voucher, VoucherBatch, VoucherAllocation, AllocationFailure],
   resolve: "./src/modules/voucher",
   testSuite: ({ service }) => {
     describe("VoucherModuleService", () => {
-      it("creates and retrieves a voucher", async () => {
-        const created = await service.createVouchers({ code: "WELCOME10" })
-        const retrieved = await service.retrieveVoucher(created.id)
+      it("imports a batch of vouchers that start as available", async () => {
+        const batch = await service.createVoucherBatches(batchInput)
+        await service.createVouchers([
+          voucherInput(1, batch.id),
+          voucherInput(2, batch.id),
+        ])
 
-        expect(retrieved.code).toBe("WELCOME10")
+        const vouchers = await service.listVouchers({
+          variant_id: "variant_100",
+          status: "available",
+        })
+
+        expect(vouchers).toHaveLength(2)
+        expect(vouchers[0].expires_at).toBeNull()
+      })
+
+      it("rejects a voucher whose code hash already exists", async () => {
+        const batch = await service.createVoucherBatches(batchInput)
+        await service.createVouchers(voucherInput(1, batch.id))
+
+        await expect(
+          service.createVouchers(voucherInput(1, batch.id))
+        ).rejects.toThrow()
+      })
+
+      it("allocates a voucher to an order line item once", async () => {
+        const batch = await service.createVoucherBatches(batchInput)
+        const voucher = await service.createVouchers(voucherInput(1, batch.id))
+
+        const allocation = await service.createVoucherAllocations({
+          voucher_id: voucher.id,
+          order_id: "order_1",
+          order_line_item_id: "item_1",
+        })
+
+        expect(allocation.delivery_status).toBe("pending")
+        expect(allocation.delivery_channel).toBe("email")
+        expect(allocation.delivery_attempts).toBe(0)
+
+        await expect(
+          service.createVoucherAllocations({
+            voucher_id: voucher.id,
+            order_id: "order_2",
+            order_line_item_id: "item_2",
+          })
+        ).rejects.toThrow()
+      })
+
+      it("records an open allocation failure", async () => {
+        const failure = await service.createAllocationFailures({
+          order_id: "order_1",
+          order_line_item_id: "item_1",
+          variant_id: "variant_100",
+          quantity_requested: 3,
+          quantity_available: 2,
+        })
+
+        expect(failure.status).toBe("open")
+        expect(failure.resolved_at).toBeNull()
       })
     })
   },
