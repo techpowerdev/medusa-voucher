@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (feature/voucher-product, pending review)
 
-- [ ] A Voucher product can be created for an existing variant with a Face value and currency, through an authenticated admin API
-- [ ] Creating one for an unknown variant, or for a variant that is already a Voucher product, is refused with a clear error
-- [ ] The admin API lists Voucher products with the variant they are linked to and the number of Available Vouchers (zero for a new one)
-- [ ] A Voucher product's Face value and currency can be changed while it has no Vouchers and are refused afterwards
-- [ ] The linked variant can be read from a Voucher product (and the reverse) through Medusa's query, proven by an integration test in a host application using the built plugin
-- [ ] No response contains a Voucher code, PIN or hash
-- [ ] The migration is generated and committed; running it again produces nothing new
-- [ ] Glossary, spec and ADR still match what was built; README notes that a host application must run `medusa db:migrate` for the link table
+- [x] A Voucher product can be created for an existing variant with a Face value and currency, through an authenticated admin API
+- [x] Creating one for an unknown variant, or for a variant that is already a Voucher product, is refused with a clear error
+- [x] The admin API lists Voucher products with the variant they are linked to and the number of Available Vouchers (zero for a new one)
+- [x] A Voucher product's Face value and currency can be changed while it has no Vouchers and are refused afterwards
+- [x] The linked variant can be read from a Voucher product (and the reverse) through Medusa's query, proven by an integration test in a host application using the built plugin
+- [x] No response contains a Voucher code, PIN or hash
+- [x] The migration is generated and committed; running it again produces nothing new
+- [x] Glossary, spec and ADR still match what was built; README notes that a host application must run `medusa db:migrate` for the link table

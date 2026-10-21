@@ -53,6 +53,16 @@ Then run the migrations in your Medusa app:
 npx medusa db:migrate
 ```
 
+## Voucher products
+
+A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR-0003](./docs/adr/0003-mark-voucher-products-with-a-linked-model.md)). Sell one Medusa product per partner (for example a supermarket) with a variant per face value, then mark each variant (admin authentication):
+
+- `POST /admin/voucher-products` with `variant_id`, `face_value` and `currency_code` marks a variant. An unknown variant is refused (404) and so is one that is already marked (422).
+- `GET /admin/voucher-products` lists them with the variant and `available_vouchers`.
+- `POST /admin/voucher-products/:id` changes `face_value` or `currency_code`, only while the Voucher product has no Vouchers.
+
+The link between a Voucher product and its variant is a Medusa module link, so run `npx medusa db:migrate` in the host application to create its table.
+
 ## Importing vouchers
 
 `POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `partner`, `variant_id` (an existing product variant), `face_value`, `currency_code`, `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The response is the batch and the number imported (`imported`), never the codes.
