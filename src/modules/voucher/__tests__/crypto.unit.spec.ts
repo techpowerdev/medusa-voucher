@@ -5,8 +5,8 @@ import {
   normalizeCode,
 } from "../utils/crypto"
 
-const KEY = "k".repeat(32)
-const OTHER_KEY = "o".repeat(32)
+const KEY = "Xk3vQ9mZ2tLw7RfB5nYc8HdJ1sGpA4uE"
+const OTHER_KEY = "Pq6Wd0aN8zVx2MbT5yKc9LfH3rJgE7sU"
 
 describe("voucher crypto", () => {
   it("rejects a missing or short encryption key", () => {
@@ -14,6 +14,22 @@ describe("voucher crypto", () => {
       /encryptionKey/
     )
     expect(() => createVoucherCrypto("too-short")).toThrow(/at least 32/)
+  })
+
+  it("rejects a long but predictable encryption key", () => {
+    expect(() => createVoucherCrypto("k".repeat(40))).toThrow(/too predictable/)
+    expect(() => createVoucherCrypto("1234".repeat(10))).toThrow(
+      /too predictable/
+    )
+  })
+
+  it("accepts random hex and base64 keys", () => {
+    expect(() =>
+      createVoucherCrypto("9f86d081884c7d659a2feaa0c55ad015")
+    ).not.toThrow()
+    expect(() =>
+      createVoucherCrypto("q3Zl0yN7bV1o8xQ2m5Jt9WcH4rKd6EaS+u/Y7g8Ahz0=")
+    ).not.toThrow()
   })
 
   it("encrypts and decrypts a secret", () => {

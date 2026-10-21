@@ -8,6 +8,7 @@ import {
 import { MedusaError } from "@medusajs/framework/utils"
 
 export const MIN_ENCRYPTION_KEY_LENGTH = 32
+export const MIN_ENCRYPTION_KEY_DISTINCT_CHARACTERS = 10
 
 const FORMAT_VERSION = "v1"
 const IV_BYTES = 12
@@ -26,6 +27,15 @@ export function assertValidEncryptionKey(
     throw new MedusaError(
       MedusaError.Types.INVALID_DATA,
       `The voucher module option "encryptionKey" is required and must be at least ${MIN_ENCRYPTION_KEY_LENGTH} characters long. Generate one with: openssl rand -base64 32`
+    )
+  }
+
+  // A cheap guard against keys like "aaaa..." or "1234123412...". It is not an entropy
+  // measurement: random hex or base64 keys always pass it with a wide margin.
+  if (new Set(key).size < MIN_ENCRYPTION_KEY_DISTINCT_CHARACTERS) {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_DATA,
+      `The voucher module option "encryptionKey" is too predictable: it must use at least ${MIN_ENCRYPTION_KEY_DISTINCT_CHARACTERS} different characters. Generate one with: openssl rand -base64 32`
     )
   }
 }
