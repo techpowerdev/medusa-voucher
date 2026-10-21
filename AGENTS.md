@@ -22,7 +22,7 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
 
 ## Environment
 
-- `docker compose up -d` starts a local PostgreSQL (`postgres`/`postgres`, port 5432).
+- `docker compose up -d` starts a local PostgreSQL (`postgres`/`postgres`, port 5432). If that port is already used by another database, set `POSTGRES_PORT` (docker compose reads it from `.env`) and `DB_PORT` in `.env` and `.env.test` to the same free port, for example 5433. Never stop or reuse another project's database.
 - Copy `.env.template` → `.env` (for `db:generate`) and `.env.test.template` → `.env.test` (for module tests). Real `.env*` files are git-ignored; never commit them.
 - HTTP integration tests use `medusaIntegrationTestRunner` with `integration-tests/medusa-config.ts` (a test-only app that registers this plugin via `resolve: path.resolve(__dirname, "..")`). `medusaConfigFile` must be an absolute path. The runner applies the plugin's migrations, so run `pnpm db:generate` after any model change. Add API route and workflow tests here as the plugin gains them (`integration-tests/http/plugin.spec.ts` only proves the plugin loads).
 - Tests (`__tests__/`, `integration-tests/`) are excluded from `tsconfig.json`, so they are not compiled into the published build.
@@ -64,6 +64,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Medusa v2 only (`@medusajs/*` pinned to the same version in dev and peer dependencies — keep them in sync when upgrading).
 - Business logic belongs in workflows and module services; API routes stay thin.
 - Define status/type values as TypeScript string enums (see `src/modules/voucher/constants.ts`) and pass the enum straight to `model.enum(...)` with `.default(Enum.VALUE)`, the way Medusa's own modules do. Do not use `as const` arrays: they are readonly and `model.enum` rejects them.
+- Voucher codes and PINs are secrets. Only `createVouchersFromCodes` may create vouchers and only `revealVoucher` may decrypt them. The CRUD methods that `MedusaService` generates (`createVouchers`, `updateVouchers`, `listVouchers`, ...) accept and return the encrypted columns, so never expose them directly through an API route or admin endpoint: use dedicated routes that strip `code_encrypted`, `pin_encrypted` and `code_hash` from responses, check authorization before revealing a code, and never write codes or PINs to logs or error messages (report positions or ids instead).
 - Imports inside the plugin must be relative (never `@khumkha/medusa-voucher/...`).
 - Project skills live in `.agents/skills/` (`building-with-medusa`, `building-admin-dashboard-customizations`, `building-storefronts`; symlinked into `.claude/skills/`). Load the matching one before any Medusa backend or admin UI work, and `building-storefronts` when calling this plugin's store API routes from a storefront. Manage them with `pnpm dlx skills update` / `list` (lock file: `skills-lock.json`).
 - Medusa docs for LLMs: https://docs.medusajs.com/llms.txt — consult it instead of guessing Medusa v2 APIs.
