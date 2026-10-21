@@ -3,6 +3,7 @@ import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
 import VoucherBatch from "./models/voucher-batch"
+import VoucherProduct from "./models/voucher-product"
 import { VoucherCodeInput, VoucherModuleOptions } from "./types"
 import { parseVoucherCsv } from "./utils/parse-voucher-csv"
 import { DEFAULT_TIMEZONE } from "./utils/timezone"
@@ -54,6 +55,7 @@ export type CreateVouchersFromCodesInput = {
 class VoucherModuleService extends MedusaService({
   Voucher,
   VoucherBatch,
+  VoucherProduct,
   VoucherAllocation,
   AllocationFailure,
 }) {
