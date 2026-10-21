@@ -50,6 +50,20 @@ These come from mistakes already made in this repo. Follow them every time.
 5. **Write pull requests and commit messages in Thai**, keeping the Conventional Commits prefix, identifiers, commands and paths in English.
 6. **Never commit, push, merge, or change GitHub settings** unless the user asks for that action in the current conversation.
 
+## Agent skills
+
+### Issue tracker
+
+Specs and tickets are local markdown files under `.scratch/<feature>/` (`spec.md`, `issues/NN-<slug>.md`), committed with the code they describe. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The default five triage roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each ticket file. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
 ## Layout
 
 Source lives in `src/`; each directory maps to a Medusa resource type and is registered automatically in the host app:
@@ -67,6 +81,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Voucher codes and PINs are secrets. Only `createVouchersFromCodes` may create vouchers and only `revealVoucher` may decrypt them. The CRUD methods that `MedusaService` generates (`createVouchers`, `updateVouchers`, `listVouchers`, ...) accept and return the encrypted columns, so never expose them directly through an API route or admin endpoint: use dedicated routes that strip `code_encrypted`, `pin_encrypted` and `code_hash` from responses, check authorization before revealing a code, and never write codes or PINs to logs or error messages (report positions or ids instead).
 - Imports inside the plugin must be relative (never `@khumkha/medusa-voucher/...`).
 - Project skills live in `.agents/skills/` (`building-with-medusa`, `building-admin-dashboard-customizations`, `building-storefronts`; symlinked into `.claude/skills/`). Load the matching one before any Medusa backend or admin UI work, and `building-storefronts` when calling this plugin's store API routes from a storefront. Manage them with `pnpm dlx skills update` / `list` (lock file: `skills-lock.json`).
+- Workflow skills from `mattpocock/skills` are in the same folder. Work flows grill (`grill-with-docs`) → `to-spec` → `to-tickets` → `tdd` / `implement` → `pr`; run `setup-matt-pocock-skills` again only to change the issue tracker. Write a spec and its tickets before building a new feature, and keep them in `.scratch/`.
 - Medusa docs for LLMs: https://docs.medusajs.com/llms.txt — consult it instead of guessing Medusa v2 APIs.
 - Keep `exports` in `package.json` as generated; they expose `workflows`, `modules/*`, `providers/*` and `admin`.
 - `exports["./workflows"]` points to `src/workflows/index.ts`, which does not exist yet. When adding the first workflow, create that file and re-export every workflow (and hooks) from it, otherwise `@khumkha/medusa-voucher/workflows` cannot be imported.
