@@ -4,11 +4,11 @@
 
 **Blocked by:** 01 (Voucher product linked to a variant).
 
-**Status:** ready-for-agent
+**Status:** done (feature/voucher-import-by-product, pending review)
 
-- [ ] The import API accepts a Voucher product and the per-purchase details, and refuses an unknown Voucher product without creating anything
-- [ ] A successful import creates the batch and Vouchers for that Voucher product; each Voucher carries the variant of its Voucher product, as before
-- [ ] The batch no longer stores Partner, Face value or currency, and the Partner field is gone from the whole data model; a new migration is generated and committed with no drift
-- [ ] Existing behaviours still hold and stay tested: duplicate codes, repeated codes, all-or-nothing, line numbers, the whole-day dates and time zone, 2,500-code import, concurrent import
-- [ ] The HTTP integration test covers the new request shape, including the unknown Voucher product and an unauthenticated request
-- [ ] README, the CSV import spec and any example request reflect the new shape
+- [x] The import API accepts a Voucher product and the per-purchase details, and refuses an unknown Voucher product without creating anything
+- [x] A successful import creates the batch and Vouchers for that Voucher product; each Voucher carries the variant of its Voucher product, as before
+- [x] The batch no longer stores Partner, Face value or currency, and the Partner field is gone from the whole data model; a new migration is generated and committed with no drift
+- [x] Existing behaviours still hold and stay tested: duplicate codes, repeated codes, all-or-nothing, line numbers, the whole-day dates and time zone, 2,500-code import, concurrent import
+- [x] The HTTP integration test covers the new request shape, including the unknown Voucher product and an unauthenticated request
+- [x] README, the CSV import spec and any example request reflect the new shape

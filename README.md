@@ -65,7 +65,7 @@ The link between a Voucher product and its variant is a Medusa module link, so r
 
 ## Importing vouchers
 
-`POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `partner`, `variant_id` (an existing product variant), `face_value`, `currency_code`, `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The response is the batch and the number imported (`imported`), never the codes.
+`POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `voucher_product_id` (an existing Voucher product, see above; an unknown one is refused with 404), `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The batch stores only these per-purchase details: the Face value and currency are the Voucher product's, and the Partner is not stored because the Medusa product already says whose voucher it is. The response is the batch and the number imported (`imported`), never the codes.
 
 The CSV needs a header row. `code` is required; `pin`, `valid_from` and `valid_until` are optional; other columns are rejected.
 

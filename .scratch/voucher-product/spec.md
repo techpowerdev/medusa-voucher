@@ -51,6 +51,7 @@ A Voucher product is a record the plugin owns, linked to exactly one product var
 - Creating the Medusa product and variant itself; operators do that with Medusa's own tools and then mark the variant.
 - Per-product minimum remaining validity (the place for it is reserved, the setting is not built).
 - Shopper-facing stock that reflects eligible Vouchers.
+- Deleting a Voucher product. No route exists yet. When one is added it should be refused while the Voucher product has any Voucher, because a batch refers to its Voucher product by id with no database foreign key.
 - Migrating data created before this change: the plugin has not been released, so no migration of existing data is provided.
 
 ## Further Notes
