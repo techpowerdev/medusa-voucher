@@ -9,11 +9,11 @@ A single redeemable code issued by a Partner, with a face value and a Validity p
 _Avoid_: Coupon, gift card, promo code, discount code
 
 **Partner**:
-The third-party brand or retailer that issues a Voucher and honours it (for example a supermarket or coffee chain). A Partner is data, never a concept the plugin treats specially.
+The third-party brand or retailer that issues a Voucher and honours it (for example a supermarket or coffee chain). A Partner is data, never a concept the plugin treats specially: the store sells one Medusa product per Partner, so the plugin has no field for it.
 _Avoid_: Brand, vendor, supplier, issuer
 
 **Voucher batch**:
-One purchase of Vouchers from a Partner, imported together and sharing the Partner, face value, currency, purchase cost, purchase date and reference.
+One purchase of Vouchers for a Voucher product, imported together and sharing the purchase cost, purchase date and reference. The Face value and currency are those of the Voucher product.
 _Avoid_: Lot, import, stock
 
 **Face value**:
@@ -21,7 +21,7 @@ The amount the Partner will honour when the Voucher is redeemed, regardless of t
 _Avoid_: Denomination, price
 
 **Voucher product**:
-A product variant sold in the store whose purchase delivers Vouchers of one Partner and one Face value.
+A product variant sold in the store whose purchase delivers Vouchers of one Face value, under the Medusa product that stands for one Partner. A variant is a Voucher product only when it has been deliberately marked as one.
 _Avoid_: Voucher SKU, voucher item
 
 **Validity period**:
@@ -99,7 +99,7 @@ _Avoid_: Near expiry
 ## Relationships
 
 - A **Partner** issues many **Vouchers**; each **Voucher** belongs to exactly one **Voucher batch** and one **Voucher product**.
-- A **Voucher batch** is bought from one **Partner** and contains **Vouchers** for one **Voucher product**.
+- A **Voucher batch** is a purchase for one **Voucher product** and contains its **Vouchers**. A **Voucher product** is a variant of the Medusa product that stands for one **Partner**.
 - A **Pool** is the set of **Vouchers** of one **Voucher product**.
 - An **Allocation** links one **Voucher** to one purchased unit of an order; a **Delivery** sends the code of that **Allocation**.
 
