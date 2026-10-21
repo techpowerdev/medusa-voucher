@@ -6,7 +6,7 @@ A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by thir
 
 ## Planned features
 
-- Import voucher codes from a CSV file as a batch, with the partner, face value, cost and expiry date.
+- Import voucher codes from a CSV file as a batch, with the partner, face value, cost, validity period and redemption instructions.
 - Link each face value to a Medusa product variant, and track the codes available for sale.
 - Allocate codes to an order after payment and deliver them to the customer through the Notification module (email first, LINE later).
 - Admin pages to import, review and replace codes, with stock and expiry alerts.

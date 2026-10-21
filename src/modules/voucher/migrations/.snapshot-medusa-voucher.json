@@ -153,6 +153,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "resolved_by": {
+          "name": "resolved_by",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
@@ -377,6 +393,38 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "redemption_instructions": {
+          "name": "redemption_instructions",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "imported_by": {
+          "name": "imported_by",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "metadata": {
           "name": "metadata",
           "type": "jsonb",
@@ -576,6 +624,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "pin_encrypted": {
+          "name": "pin_encrypted",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
         "status": {
           "name": "status",
           "type": "text",
@@ -598,8 +662,8 @@
           ],
           "mappedType": "enum"
         },
-        "expires_at": {
-          "name": "expires_at",
+        "valid_from": {
+          "name": "valid_from",
           "type": "timestamptz",
           "unsigned": false,
           "autoincrement": false,
@@ -613,6 +677,70 @@
           "comment": null,
           "enumItems": [],
           "mappedType": "datetime"
+        },
+        "valid_until": {
+          "name": "valid_until",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "void_reason": {
+          "name": "void_reason",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
+        },
+        "voided_at": {
+          "name": "voided_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": 6,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "datetime"
+        },
+        "voided_by": {
+          "name": "voided_by",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "text"
         },
         "variant_id": {
           "name": "variant_id",
@@ -726,13 +854,13 @@
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_deleted_at\" ON \"voucher\" (\"deleted_at\") WHERE deleted_at IS NULL"
         },
         {
-          "keyName": "IDX_voucher_variant_id_status_expires_at",
+          "keyName": "IDX_voucher_variant_id_status_valid_until",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_variant_id_status_expires_at\" ON \"voucher\" (\"variant_id\", \"status\", \"expires_at\") WHERE deleted_at IS NULL"
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_variant_id_status_valid_until\" ON \"voucher\" (\"variant_id\", \"status\", \"valid_until\") WHERE deleted_at IS NULL"
         },
         {
           "keyName": "voucher_pkey",

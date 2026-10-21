@@ -12,6 +12,7 @@ const AllocationFailure = model
     status: model.enum([...ALLOCATION_FAILURE_STATUSES]).default("open"),
     resolved_at: model.dateTime().nullable(),
     resolution_note: model.text().nullable(),
+    resolved_by: model.text().nullable(),
   })
   .indexes([{ on: ["order_id"] }, { on: ["status"] }])
 
