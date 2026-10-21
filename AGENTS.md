@@ -22,7 +22,7 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
 
 ## Environment
 
-- `docker compose up -d` starts a local PostgreSQL (`postgres`/`postgres`, port 5432).
+- `docker compose up -d` starts a local PostgreSQL (`postgres`/`postgres`, port 5432). If that port is already used by another database, set `POSTGRES_PORT` (docker compose reads it from `.env`) and `DB_PORT` in `.env` and `.env.test` to the same free port, for example 5433. Never stop or reuse another project's database.
 - Copy `.env.template` → `.env` (for `db:generate`) and `.env.test.template` → `.env.test` (for module tests). Real `.env*` files are git-ignored; never commit them.
 - HTTP integration tests use `medusaIntegrationTestRunner` with `integration-tests/medusa-config.ts` (a test-only app that registers this plugin via `resolve: path.resolve(__dirname, "..")`). `medusaConfigFile` must be an absolute path. The runner applies the plugin's migrations, so run `pnpm db:generate` after any model change. Add API route and workflow tests here as the plugin gains them (`integration-tests/http/plugin.spec.ts` only proves the plugin loads).
 - Tests (`__tests__/`, `integration-tests/`) are excluded from `tsconfig.json`, so they are not compiled into the published build.
