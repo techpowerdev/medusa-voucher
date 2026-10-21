@@ -1,8 +1,6 @@
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import path from "path"
-import { VOUCHER_MODULE } from "../../src/modules/voucher"
-import VoucherModuleService from "../../src/modules/voucher/service"
 import { createAdminHeaders, createVariant } from "../helpers/admin"
 
 jest.setTimeout(60 * 1000)
@@ -67,23 +65,17 @@ medusaIntegrationTestRunner({
         expect(list.data.voucher_products).toHaveLength(1)
       })
 
-      // Vouchers are put in through the service here: the import API changes in the next
-      // ticket to take a Voucher product, and these tests are about Voucher products.
-      const addVouchers = async (variant_id: string, codes: string[]) => {
-        const service: VoucherModuleService = getContainer().resolve(VOUCHER_MODULE)
-        const batch = await service.createVoucherBatches({
-          partner: "Example Partner",
-          variant_id,
-          face_value: 100,
-          currency_code: "thb",
-          purchased_at: new Date(),
-        })
-
-        return service.createVouchersFromCodes({
-          batch_id: batch.id,
-          vouchers: codes.map((code) => ({ code })),
-        })
-      }
+      // Vouchers are put in through the import API against the Voucher product.
+      const addVouchers = async (voucherProductId: string, codes: string[]) =>
+        api.post(
+          "/admin/voucher-batches/import",
+          {
+            voucher_product_id: voucherProductId,
+            purchased_at: "2026-10-01",
+            csv: ["code", ...codes].join("\n"),
+          },
+          headers
+        )
 
       it("lists Voucher products with their variant and how many Vouchers are Available", async () => {
         const empty = await create({ variant_id: variantId })
@@ -91,7 +83,7 @@ medusaIntegrationTestRunner({
 
         const otherVariantId = await createVariant(getContainer(), "500")
         const other = await create({ variant_id: otherVariantId, face_value: 500 })
-        await addVouchers(otherVariantId, ["LIST-CODE-0001", "LIST-CODE-0002"])
+        await addVouchers(other.data.voucher_product.id, ["LIST-CODE-0001", "LIST-CODE-0002"])
 
         const response = await api.get("/admin/voucher-products", headers)
         const byId = Object.fromEntries(
@@ -128,7 +120,7 @@ medusaIntegrationTestRunner({
 
         it("refuses the change once the product has Vouchers, leaving it as it was", async () => {
           const created = await create({ variant_id: variantId })
-          await addVouchers(variantId, ["CHANGE-CODE-0001"])
+          await addVouchers(created.data.voucher_product.id, ["CHANGE-CODE-0001"])
 
           const response = await update(created.data.voucher_product.id, { face_value: 500 })
 

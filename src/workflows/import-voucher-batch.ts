@@ -6,27 +6,33 @@ import {
 import { createVoucherBatchStep, CreateVoucherBatchStepInput } from "./steps/create-voucher-batch"
 import { createVouchersFromCodesStep } from "./steps/create-vouchers-from-codes"
 import { parseVoucherCsvStep } from "./steps/parse-voucher-csv"
-import { validateVoucherVariantStep } from "./steps/validate-voucher-variant"
+import { resolveVoucherProductVariantStep } from "./steps/resolve-voucher-product-variant"
 
-export type ImportVoucherBatchInput = CreateVoucherBatchStepInput & {
+export type ImportVoucherBatchInput = Omit<CreateVoucherBatchStepInput, "variant_id"> & {
   csv: string
 }
 
 export const importVoucherBatchWorkflowId = "import-voucher-batch"
 
 /**
- * Creates a Voucher batch and stores the vouchers listed in a CSV file for it. The CSV is
+ * Creates a Voucher batch for a Voucher product and stores the vouchers listed in a CSV file
+ * for it. The CSV is
  * checked first, so a file with any problem creates nothing.
  */
 export const importVoucherBatchWorkflow = createWorkflow(
   importVoucherBatchWorkflowId,
   (input: ImportVoucherBatchInput) => {
-    validateVoucherVariantStep({ variant_id: input.variant_id })
+    const variantId = resolveVoucherProductVariantStep({
+      voucher_product_id: input.voucher_product_id,
+    })
 
     const csv = transform({ input }, ({ input }) => ({ csv: input.csv }))
     const vouchers = parseVoucherCsvStep(csv)
 
-    const batchInput = transform({ input }, ({ input: { csv: _csv, ...batch } }) => batch)
+    const batchInput = transform({ input, variantId }, ({ input: { csv: _csv, ...batch }, variantId }) => ({
+      ...batch,
+      variant_id: variantId,
+    }))
     const batch = createVoucherBatchStep(batchInput)
 
     const voucherInput = transform({ batch, vouchers }, ({ batch, vouchers }) => ({

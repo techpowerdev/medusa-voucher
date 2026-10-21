@@ -5,13 +5,7 @@ import {
 import { z } from "@medusajs/framework/zod"
 
 export const ImportVoucherBatchSchema = z.object({
-  partner: z.string().trim().min(1),
-  variant_id: z.string().min(1),
-  face_value: z.number().positive(),
-  currency_code: z
-    .string()
-    .length(3)
-    .transform((code) => code.toLowerCase()),
+  voucher_product_id: z.string().min(1),
   unit_cost: z.number().nonnegative().nullish(),
   purchased_at: z.coerce.date(),
   reference: z.string().nullish(),

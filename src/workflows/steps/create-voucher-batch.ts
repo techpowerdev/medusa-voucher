@@ -3,10 +3,8 @@ import { VOUCHER_MODULE } from "../../modules/voucher"
 import VoucherModuleService from "../../modules/voucher/service"
 
 export type CreateVoucherBatchStepInput = {
-  partner: string
+  voucher_product_id: string
   variant_id: string
-  face_value: number
-  currency_code: string
   unit_cost?: number | null
   purchased_at: Date
   reference?: string | null
