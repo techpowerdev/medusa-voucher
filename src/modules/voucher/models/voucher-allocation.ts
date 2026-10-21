@@ -1,5 +1,5 @@
 import { model } from "@medusajs/framework/utils"
-import { DELIVERY_STATUSES } from "../constants"
+import { DeliveryStatus } from "../constants"
 import Voucher from "./voucher"
 
 // One Voucher assigned to one purchased unit of an order line item. A Replacement
@@ -12,7 +12,7 @@ const VoucherAllocation = model
     customer_id: model.text().nullable(),
     recipient_email: model.text().nullable(),
     delivery_channel: model.text().default("email"),
-    delivery_status: model.enum([...DELIVERY_STATUSES]).default("pending"),
+    delivery_status: model.enum(DeliveryStatus).default(DeliveryStatus.PENDING),
     delivery_attempts: model.number().default(0),
     delivery_error: model.text().nullable(),
     delivered_at: model.dateTime().nullable(),

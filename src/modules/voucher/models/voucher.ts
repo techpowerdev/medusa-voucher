@@ -1,5 +1,5 @@
 import { model } from "@medusajs/framework/utils"
-import { VOUCHER_STATUSES } from "../constants"
+import { VoucherStatus } from "../constants"
 import VoucherAllocation from "./voucher-allocation"
 import VoucherBatch from "./voucher-batch"
 
@@ -16,7 +16,7 @@ const Voucher = model
     code_hash: model.text().unique(),
     code_hint: model.text(),
     pin_encrypted: model.text().nullable(),
-    status: model.enum([...VOUCHER_STATUSES]).default("available"),
+    status: model.enum(VoucherStatus).default(VoucherStatus.AVAILABLE),
     valid_from: model.dateTime().nullable(),
     valid_until: model.dateTime().nullable(),
     void_reason: model.text().nullable(),

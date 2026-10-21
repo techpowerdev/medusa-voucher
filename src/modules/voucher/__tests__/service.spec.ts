@@ -1,5 +1,6 @@
 import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { VOUCHER_MODULE } from ".."
+import { AllocationFailureStatus, DeliveryStatus, VoucherStatus } from "../constants"
 import AllocationFailure from "../models/allocation-failure"
 import Voucher from "../models/voucher"
 import VoucherAllocation from "../models/voucher-allocation"
@@ -41,7 +42,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
 
         const vouchers = await service.listVouchers({
           variant_id: "variant_100",
-          status: "available",
+          status: VoucherStatus.AVAILABLE,
         })
 
         expect(vouchers).toHaveLength(2)
@@ -64,7 +65,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
 
         const voided = await service.updateVouchers({
           id: voucher.id,
-          status: "void",
+          status: VoucherStatus.VOID,
           void_reason: "Code rejected by partner",
           voided_at: new Date("2026-03-01"),
           voided_by: "user_1",
@@ -73,7 +74,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
         expect(voided.valid_from).toEqual(new Date("2026-02-01"))
         expect(voided.valid_until).toEqual(new Date("2026-08-01"))
         expect(voided.pin_encrypted).toBe("encrypted-pin")
-        expect(voided.status).toBe("void")
+        expect(voided.status).toBe(VoucherStatus.VOID)
         expect(voided.void_reason).toBe("Code rejected by partner")
       })
 
@@ -96,7 +97,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
           order_line_item_id: "item_1",
         })
 
-        expect(allocation.delivery_status).toBe("pending")
+        expect(allocation.delivery_status).toBe(DeliveryStatus.PENDING)
         expect(allocation.delivery_channel).toBe("email")
         expect(allocation.delivery_attempts).toBe(0)
 
@@ -118,7 +119,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
           quantity_available: 2,
         })
 
-        expect(failure.status).toBe("open")
+        expect(failure.status).toBe(AllocationFailureStatus.OPEN)
         expect(failure.resolved_at).toBeNull()
       })
     })

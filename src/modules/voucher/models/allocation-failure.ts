@@ -1,5 +1,5 @@
 import { model } from "@medusajs/framework/utils"
-import { ALLOCATION_FAILURE_STATUSES } from "../constants"
+import { AllocationFailureStatus } from "../constants"
 
 const AllocationFailure = model
   .define("allocation_failure", {
@@ -9,7 +9,7 @@ const AllocationFailure = model
     variant_id: model.text(),
     quantity_requested: model.number(),
     quantity_available: model.number(),
-    status: model.enum([...ALLOCATION_FAILURE_STATUSES]).default("open"),
+    status: model.enum(AllocationFailureStatus).default(AllocationFailureStatus.OPEN),
     resolved_at: model.dateTime().nullable(),
     resolution_note: model.text().nullable(),
     resolved_by: model.text().nullable(),

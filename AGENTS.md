@@ -51,6 +51,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Use the terms in `GLOSSARY.md` for models, API fields, events and docs (a code is a **Voucher**, an import is a **Voucher batch**, and so on) and avoid the listed synonyms. Update the glossary when a term changes; record hard-to-reverse decisions as ADRs in `docs/adr/`.
 - Medusa v2 only (`@medusajs/*` pinned to the same version in dev and peer dependencies — keep them in sync when upgrading).
 - Business logic belongs in workflows and module services; API routes stay thin.
+- Define status/type values as TypeScript string enums (see `src/modules/voucher/constants.ts`) and pass the enum straight to `model.enum(...)` with `.default(Enum.VALUE)`, the way Medusa's own modules do. Do not use `as const` arrays: they are readonly and `model.enum` rejects them.
 - Imports inside the plugin must be relative (never `@khumkha/medusa-voucher/...`).
 - Project skills live in `.agents/skills/` (`building-with-medusa`, `building-admin-dashboard-customizations`, `building-storefronts`; symlinked into `.claude/skills/`). Load the matching one before any Medusa backend or admin UI work, and `building-storefronts` when calling this plugin's store API routes from a storefront. Manage them with `pnpm dlx skills update` / `list` (lock file: `skills-lock.json`).
 - Medusa docs for LLMs: https://docs.medusajs.com/llms.txt — consult it instead of guessing Medusa v2 APIs.

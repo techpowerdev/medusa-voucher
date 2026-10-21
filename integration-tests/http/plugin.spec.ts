@@ -1,5 +1,6 @@
 import path from "path"
 import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { VoucherStatus } from "../../src/modules/voucher/constants"
 import { VOUCHER_MODULE } from "../../src/modules/voucher"
 import VoucherModuleService from "../../src/modules/voucher/service"
 
@@ -29,7 +30,7 @@ medusaIntegrationTestRunner({
           batch_id: batch.id,
         })
 
-        expect(voucher.status).toBe("available")
+        expect(voucher.status).toBe(VoucherStatus.AVAILABLE)
       })
     })
   },
