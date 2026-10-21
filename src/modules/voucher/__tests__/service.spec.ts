@@ -5,6 +5,7 @@ import AllocationFailure from "../models/allocation-failure"
 import Voucher from "../models/voucher"
 import VoucherAllocation from "../models/voucher-allocation"
 import VoucherBatch from "../models/voucher-batch"
+import VoucherProduct from "../models/voucher-product"
 import VoucherModuleService from "../service"
 
 jest.setTimeout(60 * 1000)
@@ -29,11 +30,23 @@ const voucherInput = (n: number, batch_id: string) => ({
 
 moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
-  moduleModels: [Voucher, VoucherBatch, VoucherAllocation, AllocationFailure],
+  moduleModels: [Voucher, VoucherBatch, VoucherProduct, VoucherAllocation, AllocationFailure],
   resolve: "./src/modules/voucher",
   moduleOptions: { encryptionKey: "Xk3vQ9mZ2tLw7RfB5nYc8HdJ1sGpA4uE" },
   testSuite: ({ service }) => {
     describe("VoucherModuleService", () => {
+      it("stores a Voucher product and refuses a Face value that is not positive", async () => {
+        const stored = await service.createVoucherProducts({ face_value: 100, currency_code: "thb" })
+
+        expect(Number(stored.face_value)).toBe(100)
+        await expect(
+          service.createVoucherProducts({ face_value: 0, currency_code: "thb" })
+        ).rejects.toThrow()
+        await expect(
+          service.createVoucherProducts({ face_value: -5, currency_code: "thb" })
+        ).rejects.toThrow()
+      })
+
       it("imports a batch of vouchers that start as available", async () => {
         const batch = await service.createVoucherBatches(batchInput)
         await service.createVouchers([
