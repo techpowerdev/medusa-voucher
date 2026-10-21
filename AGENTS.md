@@ -69,7 +69,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 - Project skills live in `.agents/skills/` (`building-with-medusa`, `building-admin-dashboard-customizations`, `building-storefronts`; symlinked into `.claude/skills/`). Load the matching one before any Medusa backend or admin UI work, and `building-storefronts` when calling this plugin's store API routes from a storefront. Manage them with `pnpm dlx skills update` / `list` (lock file: `skills-lock.json`).
 - Medusa docs for LLMs: https://docs.medusajs.com/llms.txt — consult it instead of guessing Medusa v2 APIs.
 - Keep `exports` in `package.json` as generated; they expose `workflows`, `modules/*`, `providers/*` and `admin`.
-- `exports["./workflows"]` points to `src/workflows/index.ts`, which does not exist yet. When adding the first workflow, create that file and re-export every workflow (and hooks) from it, otherwise `@khumkha/medusa-voucher/workflows` cannot be imported.
+- `exports["./workflows"]` points to `src/workflows/index.ts`. Re-export every new workflow (and hooks) from it, otherwise `@khumkha/medusa-voucher/workflows` cannot import it.
 
 ## Branching
 

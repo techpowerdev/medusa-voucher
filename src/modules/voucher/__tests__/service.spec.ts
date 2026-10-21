@@ -237,13 +237,13 @@ moduleIntegrationTestRunner<VoucherModuleService>({
               ],
             })
           ).rejects.toThrow(
-            "Voucher 2 ends (valid_until) before it starts (valid_from)"
+            "Voucher 2 ends (valid_until) at or before it starts (valid_from)"
           )
 
           expect(await service.listVouchers({})).toHaveLength(0)
         })
 
-        it("accepts open-ended periods and a period of a single instant", async () => {
+        it("accepts open-ended periods and rejects an empty one", async () => {
           const batch = await createBatch()
           const instant = new Date("2026-06-01")
 
@@ -252,11 +252,31 @@ moduleIntegrationTestRunner<VoucherModuleService>({
             vouchers: [
               { code: "ONLY-FROM-0001", valid_from: instant },
               { code: "ONLY-UNTIL-0002", valid_until: instant },
-              { code: "SAME-INSTANT-0003", valid_from: instant, valid_until: instant },
             ],
           })
 
-          expect(created).toHaveLength(3)
+          expect(created).toHaveLength(2)
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [
+                { code: "SAME-INSTANT-0003", valid_from: instant, valid_until: instant },
+              ],
+            })
+          ).rejects.toThrow("at or before it starts")
+        })
+
+        it("rejects an empty validity period at the database", async () => {
+          const batch = await createBatch()
+
+          await expect(
+            service.createVouchers({
+              ...voucherInput(9, batch.id),
+              valid_from: new Date("2026-12-01"),
+              valid_until: new Date("2026-12-01"),
+            })
+          ).rejects.toThrow()
         })
 
         it("rejects an unknown batch and creates nothing", async () => {
@@ -309,6 +329,20 @@ moduleIntegrationTestRunner<VoucherModuleService>({
               vouchers: [{ code: "OK-0001" }, { code: "   " }],
             })
           ).rejects.toThrow("Voucher 2 has an empty code")
+        })
+
+        it("names the source line instead of the position when given", async () => {
+          const batch = await createBatch()
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [
+                { code: "OK-0001", source_line: 2 },
+                { code: "OK-0001", source_line: 7 },
+              ],
+            })
+          ).rejects.toThrow("Repeated codes at lines: 7")
         })
       })
     })

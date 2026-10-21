@@ -1,6 +1,6 @@
 import { Migration } from "@medusajs/framework/mikro-orm/migrations";
 
-export class Migration20261021050940 extends Migration {
+export class Migration20261021160259 extends Migration {
 
   override async up(): Promise<void> {
     this.addSql(`alter table if exists "voucher_allocation" drop constraint if exists "voucher_allocation_voucher_id_unique";`);
@@ -14,7 +14,7 @@ export class Migration20261021050940 extends Migration {
     this.addSql(`CREATE INDEX IF NOT EXISTS "IDX_voucher_batch_variant_id" ON "voucher_batch" ("variant_id") WHERE deleted_at IS NULL;`);
     this.addSql(`CREATE INDEX IF NOT EXISTS "IDX_voucher_batch_deleted_at" ON "voucher_batch" ("deleted_at") WHERE deleted_at IS NULL;`);
 
-    this.addSql(`create table if not exists "voucher" ("id" text not null, "code_encrypted" text not null, "code_hash" text not null, "code_hint" text not null, "pin_encrypted" text null, "status" text check ("status" in ('available', 'allocated', 'delivered', 'expired', 'void')) not null default 'available', "valid_from" timestamptz null, "valid_until" timestamptz null, "void_reason" text null, "voided_at" timestamptz null, "voided_by" text null, "variant_id" text not null, "batch_id" text not null, "created_at" timestamptz not null default now(), "updated_at" timestamptz not null default now(), "deleted_at" timestamptz null, constraint "voucher_pkey" primary key ("id"));`);
+    this.addSql(`create table if not exists "voucher" ("id" text not null, "code_encrypted" text not null, "code_hash" text not null, "code_hint" text not null, "pin_encrypted" text null, "status" text check ("status" in ('available', 'allocated', 'delivered', 'expired', 'void')) not null default 'available', "valid_from" timestamptz null, "valid_until" timestamptz null, "void_reason" text null, "voided_at" timestamptz null, "voided_by" text null, "variant_id" text not null, "batch_id" text not null, "created_at" timestamptz not null default now(), "updated_at" timestamptz not null default now(), "deleted_at" timestamptz null, constraint "voucher_pkey" primary key ("id"), constraint voucher_validity_order_check check (valid_from < valid_until));`);
     this.addSql(`CREATE UNIQUE INDEX IF NOT EXISTS "IDX_voucher_code_hash_unique" ON "voucher" ("code_hash") WHERE deleted_at IS NULL;`);
     this.addSql(`CREATE INDEX IF NOT EXISTS "IDX_voucher_batch_id" ON "voucher" ("batch_id") WHERE deleted_at IS NULL;`);
     this.addSql(`CREATE INDEX IF NOT EXISTS "IDX_voucher_deleted_at" ON "voucher" ("deleted_at") WHERE deleted_at IS NULL;`);

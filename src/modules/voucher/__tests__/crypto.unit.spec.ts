@@ -104,6 +104,11 @@ describe("voucher options loader", () => {
     await expect(run({ encryptionKey: "short" })).rejects.toThrow(/at least 32/)
   })
 
+  it("fails on an unknown time zone and accepts a known one", async () => {
+    await expect(run({ encryptionKey: KEY, timezone: "Mars/Olympus" })).rejects.toThrow(/timezone/)
+    await expect(run({ encryptionKey: KEY, timezone: "UTC" })).resolves.toBeUndefined()
+  })
+
   it("passes with a valid key", async () => {
     await expect(run({ encryptionKey: KEY })).resolves.toBeUndefined()
   })

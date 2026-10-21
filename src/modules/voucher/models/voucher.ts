@@ -4,7 +4,9 @@ import VoucherAllocation from "./voucher-allocation"
 import VoucherBatch from "./voucher-batch"
 
 // The validity period runs from `valid_from` until `valid_until`; either end may be
-// open. `pin_encrypted` is the optional second secret some Partners require.
+// open. Like Medusa's own campaigns and price lists, the period is the half-open interval
+// `valid_from <= now < valid_until`: `valid_until` is the first instant it no longer applies.
+// `pin_encrypted` is the optional second secret some Partners require.
 // `variant_id` repeats the batch's value so the Pool of a Voucher product can be
 // queried and claimed without joining the batch. It never changes after import.
 // `code_encrypted` holds the code, `code_hash` is a keyed hash used to reject
@@ -29,5 +31,11 @@ const Voucher = model
       .nullable(),
   })
   .indexes([{ on: ["variant_id", "status", "valid_until"] }])
+  .checks([
+    {
+      name: "voucher_validity_order_check",
+      expression: (columns) => `${columns.valid_from} < ${columns.valid_until}`,
+    },
+  ])
 
 export default Voucher

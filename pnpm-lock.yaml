@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      csv-parse:
+        specifier: 7.0.3
+        version: 7.0.3
     devDependencies:
       '@medusajs/admin-sdk':
         specifier: 2.21.2
