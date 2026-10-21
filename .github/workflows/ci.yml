@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - name: Check migrations are up to date
+        run: |
+          pnpm db:generate
+          changes="$(git status --porcelain --untracked-files=all -- src | grep '/migrations/' || true)"
+          if [ -n "$changes" ]; then
+            echo "Migrations are out of date. Run 'pnpm db:generate' and commit the result:"
+            echo "$changes"
+            exit 1
+          fi
+      - run: pnpm test:unit
+      - run: pnpm test:integration:modules
+      - run: pnpm test:integration:http

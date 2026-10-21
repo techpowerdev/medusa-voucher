@@ -1,0 +1,22 @@
+# .github/workflows/update-medusa.yml
+name: Update Medusa
+
+on: 
+  workflow_dispatch: # Allow manual runs
+
+jobs:
+  update:
+    # Required for opening PRs
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Medusa
+        uses: medusajs/medusa-update-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          
