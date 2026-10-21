@@ -873,7 +873,13 @@
           "unique": true
         }
       ],
-      "checks": [],
+      "checks": [
+        {
+          "name": "voucher_validity_order_check",
+          "expression": "valid_from < valid_until",
+          "definition": "check ((valid_from < valid_until))"
+        }
+      ],
       "foreignKeys": {
         "voucher_batch_id_foreign": {
           "constraintName": "voucher_batch_id_foreign",

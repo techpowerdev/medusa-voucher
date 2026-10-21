@@ -3,7 +3,9 @@ import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
 import VoucherBatch from "./models/voucher-batch"
-import { VoucherModuleOptions } from "./types"
+import { VoucherCodeInput, VoucherModuleOptions } from "./types"
+import { parseVoucherCsv } from "./utils/parse-voucher-csv"
+import { DEFAULT_TIMEZONE } from "./utils/timezone"
 import {
   codeHint,
   createVoucherCrypto,
@@ -44,13 +46,6 @@ function isUniqueViolation(error: unknown): boolean {
   )
 }
 
-export type VoucherCodeInput = {
-  code: string
-  pin?: string | null
-  valid_from?: Date | null
-  valid_until?: Date | null
-}
-
 export type CreateVouchersFromCodesInput = {
   batch_id: string
   vouchers: VoucherCodeInput[]
@@ -63,20 +58,27 @@ class VoucherModuleService extends MedusaService({
   AllocationFailure,
 }) {
   protected crypto_: VoucherCrypto
+  protected timezone_: string
 
   constructor(container: Record<string, unknown>, options: VoucherModuleOptions) {
     // @ts-ignore
     super(...arguments)
 
     this.crypto_ = createVoucherCrypto(options?.encryptionKey)
+    this.timezone_ = options?.timezone ?? DEFAULT_TIMEZONE
+  }
+
+  /** Reads a vouchers CSV, turning its dates into whole days in the configured time zone. */
+  async parseVoucherCsv(content: string) {
+    return parseVoucherCsv(content, this.timezone_)
   }
 
   /**
    * Encrypts and stores plain voucher codes (and PINs) for a batch. Each voucher takes
    * its variant from the batch, so the two can never disagree. The whole call is
    * rejected, creating nothing, when the batch does not exist, a validity period ends
-   * before it starts, or a code is empty, repeated in the input or already stored. Errors name the 1-based position in
-   * `vouchers`, never the code itself.
+   * before it starts, or a code is empty, repeated in the input or already stored. Errors
+   * name the 1-based position in `vouchers` (or its `source_line`), never the code itself.
    */
   async createVouchersFromCodes({
     batch_id,
@@ -84,22 +86,29 @@ class VoucherModuleService extends MedusaService({
   }: CreateVouchersFromCodesInput) {
     const batch = await this.retrieveVoucherBatch(batch_id)
 
+    const fromFile = vouchers.some((voucher) => voucher.source_line !== undefined)
+    const place = (index: number) => vouchers[index].source_line ?? index + 1
+    const where = (index: number) =>
+      fromFile ? `on line ${place(index)}` : String(place(index))
+    const places = fromFile ? "lines" : "positions"
+
     const rows = vouchers.map((voucher, index) => {
       const code = normalizeCode(voucher.code ?? "")
 
       if (!code) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          `Voucher ${index + 1} has an empty code`
+          `Voucher ${where(index)} has an empty code`
         )
       }
 
-      const { valid_from, valid_until } = voucher
+      const valid_from = voucher.valid_from ?? null
+      const valid_until = voucher.valid_until ?? null
 
-      if (valid_from && valid_until && valid_until < valid_from) {
+      if (valid_from && valid_until && valid_until <= valid_from) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          `Voucher ${index + 1} ends (valid_until) before it starts (valid_from)`
+          `Voucher ${where(index)} ends (valid_until) at or before it starts (valid_from)`
         )
       }
 
@@ -110,8 +119,8 @@ class VoucherModuleService extends MedusaService({
         code_hash: this.crypto_.hash(code),
         code_hint: codeHint(code),
         pin_encrypted: pin ? this.crypto_.encrypt(pin) : null,
-        valid_from: voucher.valid_from ?? null,
-        valid_until: voucher.valid_until ?? null,
+        valid_from,
+        valid_until,
         variant_id: batch.variant_id,
         batch_id: batch.id,
       }
@@ -122,16 +131,16 @@ class VoucherModuleService extends MedusaService({
 
     rows.forEach((row, index) => {
       if (positionByHash.has(row.code_hash)) {
-        repeated.push(index + 1)
+        repeated.push(place(index))
       } else {
-        positionByHash.set(row.code_hash, index + 1)
+        positionByHash.set(row.code_hash, index)
       }
     })
 
     if (repeated.length) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        `Repeated codes at positions: ${repeated.join(", ")}`
+        `Repeated codes at ${places}: ${repeated.join(", ")}`
       )
     }
 
@@ -148,12 +157,12 @@ class VoucherModuleService extends MedusaService({
 
     if (stored.length) {
       const positions = stored
-        .map((voucher) => positionByHash.get(voucher.code_hash))
-        .sort((a, b) => Number(a) - Number(b))
+        .map((voucher) => place(positionByHash.get(voucher.code_hash) as number))
+        .sort((a, b) => a - b)
 
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
-        `Codes already stored at positions: ${positions.join(", ")}`
+        `Codes already stored at ${places}: ${positions.join(", ")}`
       )
     }
 

@@ -25,7 +25,7 @@ A product variant sold in the store whose purchase delivers Vouchers of one Part
 _Avoid_: Voucher SKU, voucher item
 
 **Validity period**:
-The span of dates during which the Partner honours a Voucher, from its valid-from date to its valid-until date. Either end can be open. A Voucher can be sold before its Validity period starts.
+The span of dates during which the Partner honours a Voucher, from its valid-from date to its valid-until date. It starts at the valid-from moment and ends before the valid-until moment, so the valid-until moment is the first one it no longer applies, as for Medusa's own campaigns. Either end can be open. A Voucher can be sold before its Validity period starts.
 _Avoid_: Expiry date, usable dates, active dates
 
 **PIN**:
