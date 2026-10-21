@@ -2,11 +2,11 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** Only a placeholder `voucher` module exists so far. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage and CSV import API exist; allocation, delivery and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
-- Import voucher codes from a CSV file as a batch, with the partner, face value, cost, validity period and redemption instructions.
+- Admin page to import voucher codes from a CSV file (the import API already exists, see below).
 - Link each face value to a Medusa product variant, and track the codes available for sale.
 - Allocate codes to an order after payment and deliver them to the customer through the Notification module (email first, LINE later) as text and as a QR code.
 - Admin pages to import, review and replace codes, with stock and expiry alerts.
@@ -38,6 +38,7 @@ module.exports = defineConfig({
       resolve: "@khumkha/medusa-voucher",
       options: {
         encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
+        timezone: "Asia/Bangkok", // optional; the default
       },
     },
   ],
@@ -51,6 +52,20 @@ Then run the migrations in your Medusa app:
 ```bash
 npx medusa db:migrate
 ```
+
+## Importing vouchers
+
+`POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `partner`, `variant_id` (an existing product variant), `face_value`, `currency_code`, `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The response is the batch and the number imported (`imported`), never the codes.
+
+The CSV needs a header row. `code` is required; `pin`, `valid_from` and `valid_until` are optional; other columns are rejected.
+
+```csv
+code,pin,valid_from,valid_until
+AAAA-1111-2222,,2026-01-01,31-12-2026
+BBBB-3333-4444,1234,,
+```
+
+`valid_from` and `valid_until` are dates only, as `YYYY-MM-DD` or `DD-MM-YYYY`, and each counts as the whole of that day in the plugin's `timezone` option (an IANA zone, `Asia/Bangkok` by default): a voucher is valid from 00:00 on its `valid_from` date through the end of its `valid_until` date. A time, a two-digit year or a date that does not exist is rejected. Internally the period is stored as instants, `valid_from <= now < valid_until`, like Medusa's own campaigns, with `valid_until` set to 00:00 of the day after the date given. A file is imported whole or not at all: any problem (a bad date, an empty code, a code repeated in the file or already stored) rejects it with the line numbers concerned, and never the codes themselves. A file may hold up to 50,000 vouchers.
 
 ## Development
 
