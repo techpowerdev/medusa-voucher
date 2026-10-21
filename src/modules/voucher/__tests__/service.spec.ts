@@ -31,6 +31,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
   moduleModels: [Voucher, VoucherBatch, VoucherAllocation, AllocationFailure],
   resolve: "./src/modules/voucher",
+  moduleOptions: { encryptionKey: "k".repeat(32) },
   testSuite: ({ service }) => {
     describe("VoucherModuleService", () => {
       it("imports a batch of vouchers that start as available", async () => {
@@ -121,6 +122,113 @@ moduleIntegrationTestRunner<VoucherModuleService>({
 
         expect(failure.status).toBe(AllocationFailureStatus.OPEN)
         expect(failure.resolved_at).toBeNull()
+      })
+
+      describe("createVouchersFromCodes", () => {
+        const createBatch = () => service.createVoucherBatches(batchInput)
+
+        it("stores codes and PINs encrypted and reveals them on demand", async () => {
+          const batch = await createBatch()
+
+          const [voucher] = await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [
+              {
+                code: "  ABCD-1234-EFGH ",
+                pin: "9876",
+                valid_until: new Date("2026-12-31"),
+              },
+            ],
+          })
+
+          expect(voucher.status).toBe(VoucherStatus.AVAILABLE)
+          expect(voucher.code_hint).toBe("EFGH")
+          expect(voucher.valid_until).toEqual(new Date("2026-12-31"))
+          expect(JSON.stringify(voucher)).not.toContain("ABCD-1234")
+          expect(JSON.stringify(voucher)).not.toContain("9876")
+
+          expect(await service.revealVoucher(voucher.id)).toEqual({
+            code: "ABCD-1234-EFGH",
+            pin: "9876",
+          })
+        })
+
+        it("reveals a null PIN when the voucher has none", async () => {
+          const batch = await createBatch()
+          const [voucher] = await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [{ code: "NOPIN-CODE-0001" }],
+          })
+
+          expect(voucher.pin_encrypted).toBeNull()
+          expect((await service.revealVoucher(voucher.id)).pin).toBeNull()
+        })
+
+        it("takes the variant from the batch", async () => {
+          const batch = await service.createVoucherBatches({
+            ...batchInput,
+            variant_id: "variant_500",
+          })
+          const [voucher] = await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [{ code: "VARIANT-FROM-BATCH" }],
+          })
+
+          expect(voucher.variant_id).toBe("variant_500")
+          expect(voucher.batch_id).toBe(batch.id)
+        })
+
+        it("rejects an unknown batch and creates nothing", async () => {
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: "vbatch_missing",
+              vouchers: [{ code: "ANY-CODE-0001" }],
+            })
+          ).rejects.toThrow(/vbatch_missing/)
+
+          expect(await service.listVouchers({})).toHaveLength(0)
+        })
+
+        it("rejects the whole call when a code repeats in the input", async () => {
+          const batch = await createBatch()
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [{ code: "AAA-111" }, { code: "BBB-222" }, { code: " AAA-111" }],
+            })
+          ).rejects.toThrow("Repeated codes at positions: 3")
+
+          expect(await service.listVouchers({})).toHaveLength(0)
+        })
+
+        it("rejects the whole call when a code is already stored", async () => {
+          const batch = await createBatch()
+          await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [{ code: "STORED-0001" }],
+          })
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [{ code: "NEW-0002" }, { code: "STORED-0001" }],
+            })
+          ).rejects.toThrow("Codes already stored at positions: 2")
+
+          expect(await service.listVouchers({})).toHaveLength(1)
+        })
+
+        it("rejects an empty code without echoing any code", async () => {
+          const batch = await createBatch()
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [{ code: "OK-0001" }, { code: "   " }],
+            })
+          ).rejects.toThrow("Voucher 2 has an empty code")
+        })
       })
     })
   },

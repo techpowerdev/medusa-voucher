@@ -18,7 +18,9 @@ module.exports = defineConfig({
   plugins: [
     {
       resolve: path.resolve(__dirname, ".."),
-      options: {},
+      options: {
+        encryptionKey: "test-only-key-for-integration-tests-0123456789",
+      },
     },
   ],
 })

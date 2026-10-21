@@ -22,15 +22,17 @@ medusaIntegrationTestRunner({
           purchased_at: new Date(),
         })
 
-        const voucher = await service.createVouchers({
-          code_encrypted: "encrypted",
-          code_hash: "hash",
-          code_hint: "00",
-          variant_id: "variant_100",
+        const [voucher] = await service.createVouchersFromCodes({
           batch_id: batch.id,
+          vouchers: [{ code: "HOST-APP-CODE-0001", pin: "1234" }],
         })
 
         expect(voucher.status).toBe(VoucherStatus.AVAILABLE)
+        expect(voucher.code_encrypted).not.toContain("HOST-APP")
+        expect(await service.revealVoucher(voucher.id)).toEqual({
+          code: "HOST-APP-CODE-0001",
+          pin: "1234",
+        })
       })
     })
   },

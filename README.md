@@ -36,11 +36,15 @@ module.exports = defineConfig({
   plugins: [
     {
       resolve: "@khumkha/medusa-voucher",
-      options: {},
+      options: {
+        encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
+      },
     },
   ],
 })
 ```
+
+`encryptionKey` is required (at least 32 characters) and the application will not start without it. Voucher codes and PINs are stored encrypted with keys derived from it. Generate one with `openssl rand -base64 32`, keep it in your secret store, and do not change or lose it: stored codes cannot be read without the key that encrypted them, and key rotation is not supported yet.
 
 Then run the migrations in your Medusa app:
 
