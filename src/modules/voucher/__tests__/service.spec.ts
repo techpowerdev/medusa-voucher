@@ -178,6 +178,44 @@ moduleIntegrationTestRunner<VoucherModuleService>({
           expect(voucher.batch_id).toBe(batch.id)
         })
 
+        it("rejects a validity period that ends before it starts", async () => {
+          const batch = await createBatch()
+
+          await expect(
+            service.createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [
+                { code: "OK-PERIOD-0001", valid_until: new Date("2026-06-01") },
+                {
+                  code: "BAD-PERIOD-0002",
+                  valid_from: new Date("2026-12-01"),
+                  valid_until: new Date("2026-01-01"),
+                },
+              ],
+            })
+          ).rejects.toThrow(
+            "Voucher 2 ends (valid_until) before it starts (valid_from)"
+          )
+
+          expect(await service.listVouchers({})).toHaveLength(0)
+        })
+
+        it("accepts open-ended periods and a period of a single instant", async () => {
+          const batch = await createBatch()
+          const instant = new Date("2026-06-01")
+
+          const created = await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [
+              { code: "ONLY-FROM-0001", valid_from: instant },
+              { code: "ONLY-UNTIL-0002", valid_until: instant },
+              { code: "SAME-INSTANT-0003", valid_from: instant, valid_until: instant },
+            ],
+          })
+
+          expect(created).toHaveLength(3)
+        })
+
         it("rejects an unknown batch and creates nothing", async () => {
           await expect(
             service.createVouchersFromCodes({

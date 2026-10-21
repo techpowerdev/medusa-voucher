@@ -41,8 +41,8 @@ class VoucherModuleService extends MedusaService({
   /**
    * Encrypts and stores plain voucher codes (and PINs) for a batch. Each voucher takes
    * its variant from the batch, so the two can never disagree. The whole call is
-   * rejected, creating nothing, when the batch does not exist or a code is empty,
-   * repeated in the input or already stored. Errors name the 1-based position in
+   * rejected, creating nothing, when the batch does not exist, a validity period ends
+   * before it starts, or a code is empty, repeated in the input or already stored. Errors name the 1-based position in
    * `vouchers`, never the code itself.
    */
   async createVouchersFromCodes({
@@ -58,6 +58,15 @@ class VoucherModuleService extends MedusaService({
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
           `Voucher ${index + 1} has an empty code`
+        )
+      }
+
+      const { valid_from, valid_until } = voucher
+
+      if (valid_from && valid_until && valid_until < valid_from) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Voucher ${index + 1} ends (valid_until) before it starts (valid_from)`
         )
       }
 
