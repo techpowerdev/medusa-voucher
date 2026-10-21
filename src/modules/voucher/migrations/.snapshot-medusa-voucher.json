@@ -907,6 +907,22 @@
           "enumItems": [],
           "mappedType": "text"
         },
+        "unit_index": {
+          "name": "unit_index",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "unique": false,
+          "length": null,
+          "precision": null,
+          "scale": null,
+          "default": null,
+          "comment": null,
+          "enumItems": [],
+          "mappedType": "integer"
+        },
         "customer_id": {
           "name": "customer_id",
           "type": "text",
@@ -1174,6 +1190,15 @@
           "primary": false,
           "unique": false,
           "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_allocation_order_line_item_id\" ON \"voucher_allocation\" (\"order_line_item_id\") WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_voucher_allocation_order_line_item_id_unit_index_unique",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_voucher_allocation_order_line_item_id_unit_index_unique\" ON \"voucher_allocation\" (\"order_line_item_id\", \"unit_index\") WHERE deleted_at IS NULL AND replaces_allocation_id IS NULL"
         },
         {
           "keyName": "voucher_allocation_pkey",

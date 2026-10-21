@@ -9,6 +9,8 @@ const VoucherAllocation = model
     id: model.id({ prefix: "valloc" }).primaryKey(),
     order_id: model.text(),
     order_line_item_id: model.text(),
+    // Which unit of the line item this serves, counting from 1.
+    unit_index: model.number(),
     customer_id: model.text().nullable(),
     recipient_email: model.text().nullable(),
     delivery_channel: model.text().default("email"),
@@ -21,6 +23,15 @@ const VoucherAllocation = model
     replaced_by: model.text().nullable(),
     voucher: model.belongsTo(() => Voucher, { mappedBy: "allocation" }),
   })
-  .indexes([{ on: ["order_id"] }, { on: ["order_line_item_id"] }])
+  .indexes([
+    { on: ["order_id"] },
+    { on: ["order_line_item_id"] },
+    // A unit is served once. A Replacement serves the same unit again, so it is exempt.
+    {
+      on: ["order_line_item_id", "unit_index"],
+      unique: true,
+      where: "deleted_at IS NULL AND replaces_allocation_id IS NULL",
+    },
+  ])
 
 export default VoucherAllocation
