@@ -1,0 +1,12 @@
+/dist
+/.medusa
+/node_modules
+/coverage
+.env
+.env.*
+!.env.template
+!.env.test.template
+.DS_Store
+.idea
+*.tsbuildinfo
+.claude/settings.local.json
