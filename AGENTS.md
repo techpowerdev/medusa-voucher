@@ -2,7 +2,7 @@
 
 Instructions for AI coding agents (Claude Code, Codex, Cursor, Copilot, Gemini CLI, etc.). `CLAUDE.md` and `GEMINI.md` import this file — edit rules here only.
 
-Medusa v2 **plugin** (not a Medusa app) that provides voucher functionality: creating, managing and redeeming vouchers. It is consumed by a Medusa app via `plugins: [{ resolve: "@khumkha/medusa-voucher", options: {} }]` in `medusa-config.ts`.
+Medusa v2 **plugin** (not a Medusa app) for reselling vouchers issued by third-party partners: codes are bought in advance, imported in batches, sold as ordinary products, allocated to orders after payment and delivered to customers. See `GLOSSARY.md` for the domain language and `docs/adr/` for the decisions behind it. It is consumed by a Medusa app via `plugins: [{ resolve: "@khumkha/medusa-voucher", options: {} }]` in `medusa-config.ts`.
 
 ## Commands
 
@@ -48,6 +48,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 
 ## Conventions
 
+- Use the terms in `GLOSSARY.md` for models, API fields, events and docs (a code is a **Voucher**, an import is a **Voucher batch**, and so on) and avoid the listed synonyms. Update the glossary when a term changes; record hard-to-reverse decisions as ADRs in `docs/adr/`.
 - Medusa v2 only (`@medusajs/*` pinned to the same version in dev and peer dependencies — keep them in sync when upgrading).
 - Business logic belongs in workflows and module services; API routes stay thin.
 - Imports inside the plugin must be relative (never `@khumkha/medusa-voucher/...`).
@@ -60,7 +61,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 
 1. Copy the project (without `node_modules`, `.medusa`, `.git`, `.env*`), then `git init`.
 2. Rename everywhere `voucher` / `@khumkha/medusa-voucher` appears (also `publishConfig.access` in `package.json`: scoped packages need `public` to be published publicly): `package.json` (`name`, `description`, `keywords`), `README.md`, this file (title, description, `plugins: [{ resolve }]` example), `docker-compose.yml` (`POSTGRES_DB`) and `.env.template` (`DB_NAME`). `grep -ri voucher .` should find only the module to replace.
-3. Replace the placeholder module `src/modules/voucher` (models, service, `VOUCHER_MODULE` constant, `migrations/`, `__tests__/service.spec.ts`, and the import in `integration-tests/http/plugin.spec.ts`) with the new plugin's module — or delete it and start from the empty `src/` directories. Keep at least one `.ts` file under `src/`, otherwise `pnpm build` fails with TS18003.
+3. Replace `GLOSSARY.md` and `docs/adr/` with the new plugin's domain language and decisions, and replace the placeholder module `src/modules/voucher` (models, service, `VOUCHER_MODULE` constant, `migrations/`, `__tests__/service.spec.ts`, and the import in `integration-tests/http/plugin.spec.ts`) with the new plugin's module — or delete it and start from the empty `src/` directories. Keep at least one `.ts` file under `src/`, otherwise `pnpm build` fails with TS18003.
 4. Decide on the license: add a `LICENSE` file and `author` / `repository` in `package.json`.
 5. `nvm use && pnpm install`, copy the env templates (see Environment), then run `pnpm lint && pnpm build && pnpm test:integration:modules && pnpm test:integration:http` (the HTTP test needs migrations, so run `pnpm db:generate` first).
 6. After designing the data models, run `pnpm db:generate` and commit the migrations.
