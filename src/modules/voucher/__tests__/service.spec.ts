@@ -124,6 +124,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
           voucher_id: voucher.id,
           order_id: "order_1",
           order_line_item_id: "item_1",
+          unit_index: 1,
         })
 
         expect(allocation.delivery_status).toBe(DeliveryStatus.PENDING)
@@ -135,8 +136,34 @@ moduleIntegrationTestRunner<VoucherModuleService>({
             voucher_id: voucher.id,
             order_id: "order_2",
             order_line_item_id: "item_2",
+            unit_index: 1,
           })
         ).rejects.toThrow()
+      })
+
+      it("serves each unit of a line item once, except that a Replacement may serve it again", async () => {
+        const batch = await service.createVoucherBatches(batchInput)
+        const [first, second, third] = await service.createVouchers([
+          voucherInput(1, batch.id),
+          voucherInput(2, batch.id),
+          voucherInput(3, batch.id),
+        ])
+        const unit = { order_id: "order_1", order_line_item_id: "item_1", unit_index: 1 }
+
+        const original = await service.createVoucherAllocations({ ...unit, voucher_id: first.id })
+
+        await expect(
+          service.createVoucherAllocations({ ...unit, voucher_id: second.id })
+        ).rejects.toThrow()
+
+        await expect(
+          service.createVoucherAllocations({
+            ...unit,
+            voucher_id: third.id,
+            replaces_allocation_id: original.id,
+            replacement_reason: "Code rejected by partner",
+          })
+        ).resolves.toEqual(expect.objectContaining({ unit_index: 1 }))
       })
 
       it("records an open allocation failure", async () => {
