@@ -96,6 +96,54 @@ medusaIntegrationTestRunner({
         expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
+      describe("Paid order rule", () => {
+        const zeroTotalOrder = async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "FREE-0001" }, { code: "FREE-0002" }])
+
+          return createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2, unit_price: 0 }])
+        }
+
+        it("allocates an order with a total of 0 and no payment collection", async () => {
+          const order = await zeroTotalOrder()
+
+          await run(order.id)
+
+          const allocations = await service().listVoucherAllocations({ order_id: order.id })
+          expect(allocations.map((a) => a.unit_index).sort()).toEqual([1, 2])
+        })
+
+        it("allocates nothing for an order that costs something and has no payment collection yet", async () => {
+          const { order } = await voucherOrder(2)
+
+          await run(order.id)
+
+          expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
+        })
+
+        it("allocates nothing for a canceled order with a total of 0", async () => {
+          const order = await zeroTotalOrder()
+          await getContainer().resolve(Modules.ORDER).cancel(order.id)
+
+          await run(order.id)
+
+          expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
+          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        })
+
+        it("allocates nothing for a canceled order whose payment was captured", async () => {
+          const { order, total } = await voucherOrder(2)
+          const payment = await authorizeOrderPayment(getContainer(), order.id, total)
+          await capture(payment.id, total)
+          await getContainer().resolve(Modules.ORDER).cancel(order.id)
+
+          await run(order.id)
+
+          expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
+          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        })
+      })
+
       // Events reach subscribers asynchronously, so these wait for the Allocations to appear.
       describe("started by events", () => {
         const allocationsOf = async (orderId: string) => {
