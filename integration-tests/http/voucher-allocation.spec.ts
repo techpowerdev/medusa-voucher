@@ -208,6 +208,149 @@ medusaIntegrationTestRunner({
           expect(result.failures).toEqual([expect.objectContaining({ requested: 2, available: 1 })])
         })
       })
+
+      describe("repeated and concurrent runs", () => {
+        it("changes nothing when run again for an order that is already fully allocated", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [
+            { code: "AGAIN-0001" },
+            { code: "AGAIN-0002" },
+            { code: "AGAIN-0003" },
+          ])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+          await allocate(order.id)
+          const before = await service().listVoucherAllocations({ order_id: order.id })
+
+          const { result } = await allocate(order.id)
+
+          const after = await service().listVoucherAllocations({ order_id: order.id })
+          expect(after.map((a) => [a.id, a.voucher_id]).sort()).toEqual(
+            before.map((a) => [a.id, a.voucher_id]).sort()
+          )
+          expect(result.failures).toEqual([])
+          expect(result.allocated.map((a) => a.allocation_id).sort()).toEqual(before.map((a) => a.id).sort())
+          const vouchers = await service().listVouchers({ variant_id: product.variantId })
+          expect(vouchers.filter((v) => v.status === VoucherStatus.AVAILABLE)).toHaveLength(1)
+          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        })
+
+        it("allocates the whole order once when run again after a failure, once the Pool has enough", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "LATER-0001" }])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+          await allocate(order.id)
+          await stockVouchers(getContainer(), product, [{ code: "LATER-0002" }, { code: "LATER-0003" }])
+
+          const { result } = await allocate(order.id)
+          await allocate(order.id)
+
+          expect(result.failures).toEqual([])
+          expect(result.allocated).toHaveLength(2)
+          const allocations = await service().listVoucherAllocations({ order_id: order.id })
+          expect(allocations.map((a) => a.unit_index).sort()).toEqual([1, 2])
+          const vouchers = await service().listVouchers({ variant_id: product.variantId })
+          expect(vouchers.filter((v) => v.status === VoucherStatus.ALLOCATED)).toHaveLength(2)
+        })
+
+        it("keeps one open failure per short line when run again while the Pool is still short", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "STILL-0001" }])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+          await allocate(order.id)
+
+          const { result } = await allocate(order.id)
+
+          expect(result.allocated).toEqual([])
+          expect(result.failures).toEqual([expect.objectContaining({ requested: 2, available: 1 })])
+          const failures = await service().listAllocationFailures({ order_id: order.id })
+          expect(failures).toEqual([
+            expect.objectContaining({ status: AllocationFailureStatus.OPEN, quantity_requested: 2 }),
+          ])
+        })
+
+        it("records one open failure per short line when an order is run several times at the same moment", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "RACE-SHORT-0001" }])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+
+          const results = await Promise.all([allocate(order.id), allocate(order.id), allocate(order.id)])
+
+          for (const { result } of results) {
+            expect(result.allocated).toEqual([])
+            expect(result.failures).toEqual([expect.objectContaining({ requested: 2 })])
+          }
+          const failures = await service().listAllocationFailures({ order_id: order.id })
+          expect(failures).toEqual([
+            expect.objectContaining({ status: AllocationFailureStatus.OPEN, quantity_requested: 2 }),
+          ])
+        })
+
+        it("gives the last Voucher to exactly one of two orders allocated at the same moment", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "LAST-0001" }])
+          const first = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 1 }])
+          const second = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 1 }])
+
+          const results = await Promise.all([allocate(first.id), allocate(second.id)])
+
+          expect(results.map(({ result }) => result.allocated.length).sort()).toEqual([0, 1])
+          expect(results.map(({ result }) => result.failures.length).sort()).toEqual([0, 1])
+          const allocations = await service().listVoucherAllocations({ order_id: [first.id, second.id] })
+          expect(allocations).toHaveLength(1)
+          const failures = await service().listAllocationFailures({ order_id: [first.id, second.id] })
+          expect(failures).toEqual([expect.objectContaining({ quantity_requested: 1, quantity_available: 0 })])
+        })
+
+        it("allocates each Voucher once when many orders run against a Pool large enough for some", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(
+            getContainer(),
+            product,
+            Array.from({ length: 7 }, (_, i) => ({ code: `MANY-${String(i + 1).padStart(4, "0")}` }))
+          )
+          const orders: Awaited<ReturnType<typeof createOrder>>[] = []
+          for (let i = 0; i < 5; i++) {
+            orders.push(await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }]))
+          }
+
+          const results = await Promise.all(orders.map((order) => allocate(order.id)))
+
+          // 7 Vouchers serve 3 orders of 2; the other 2 orders get a failure and nothing.
+          expect(results.filter(({ result }) => result.allocated.length === 2)).toHaveLength(3)
+          expect(results.filter(({ result }) => result.failures.length === 1)).toHaveLength(2)
+          const allocations = await service().listVoucherAllocations({ order_id: orders.map((o) => o.id) })
+          const voucherIds = allocations.map((a) => a.voucher_id)
+          expect(voucherIds).toHaveLength(6)
+          expect(new Set(voucherIds).size).toBe(6)
+          const vouchers = await service().listVouchers({ variant_id: product.variantId })
+          expect(vouchers.filter((v) => v.status === VoucherStatus.ALLOCATED).map((v) => v.id).sort()).toEqual(
+            [...voucherIds].sort()
+          )
+          expect(vouchers.filter((v) => v.status === VoucherStatus.AVAILABLE)).toHaveLength(1)
+        })
+
+        it("allocates an order once when it is run several times at the same moment", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(
+            getContainer(),
+            product,
+            Array.from({ length: 6 }, (_, i) => ({ code: `TWICE-${String(i + 1).padStart(4, "0")}` }))
+          )
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+
+          const results = await Promise.all([allocate(order.id), allocate(order.id), allocate(order.id)])
+
+          const allocations = await service().listVoucherAllocations({ order_id: order.id })
+          expect(allocations.map((a) => a.unit_index).sort()).toEqual([1, 2])
+          for (const { result } of results) {
+            expect(result.failures).toEqual([])
+            expect(result.allocated.map((a) => a.allocation_id).sort()).toEqual(allocations.map((a) => a.id).sort())
+          }
+          const vouchers = await service().listVouchers({ variant_id: product.variantId })
+          expect(vouchers.filter((v) => v.status === VoucherStatus.ALLOCATED)).toHaveLength(2)
+          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        })
+      })
     })
   },
 })
