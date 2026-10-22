@@ -1,5 +1,5 @@
 import { MedusaContainer } from "@medusajs/framework/types"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { VOUCHER_MODULE } from "../../src/modules/voucher"
 import VoucherModuleService from "../../src/modules/voucher/service"
 import { VoucherCodeInput } from "../../src/modules/voucher/types"
@@ -51,4 +51,33 @@ export async function createOrder(container: MedusaContainer, lines: OrderLine[]
   })
 
   return order
+}
+
+// Links a payment collection for `amount` to the order and authorizes it with the system
+// provider, through the Payment module. Capturing is left to the test.
+export async function authorizeOrderPayment(
+  container: MedusaContainer,
+  orderId: string,
+  amount: number
+) {
+  const payments = container.resolve(Modules.PAYMENT)
+  const collection = await payments.createPaymentCollections({ currency_code: "thb", amount })
+  await container.resolve(ContainerRegistrationKeys.LINK).create({
+    [Modules.ORDER]: { order_id: orderId },
+    [Modules.PAYMENT]: { payment_collection_id: collection.id },
+  })
+  const session = await payments.createPaymentSession(collection.id, {
+    provider_id: "pp_system_default",
+    currency_code: "thb",
+    amount,
+    data: {},
+  })
+
+  const payment = await payments.authorizePaymentSession(session.id, {})
+
+  if (!payment) {
+    throw new Error(`The system provider did not authorize session ${session.id}`)
+  }
+
+  return payment
 }
