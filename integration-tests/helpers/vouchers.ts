@@ -35,7 +35,7 @@ export async function stockVouchers(
   return service.createVouchersFromCodes({ batch_id: batch.id, vouchers })
 }
 
-export type OrderLine = { variant_id: string; quantity: number }
+export type OrderLine = { variant_id: string; quantity: number; unit_price?: number }
 
 // An order with one line item per entry, through the Order module.
 export async function createOrder(container: MedusaContainer, lines: OrderLine[]) {
@@ -46,7 +46,7 @@ export async function createOrder(container: MedusaContainer, lines: OrderLine[]
       title: `Line ${index + 1}`,
       variant_id: line.variant_id,
       quantity: line.quantity,
-      unit_price: 100,
+      unit_price: line.unit_price ?? 100,
     })),
   })
 
