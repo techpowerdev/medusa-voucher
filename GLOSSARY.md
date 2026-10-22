@@ -50,6 +50,10 @@ _Avoid_: Inventory, stock
 A Voucher that is in the Pool and can still be sold.
 _Avoid_: In stock, unused
 
+**Paid order**:
+An order whose customer owes nothing more: every payment has been captured in full, or the order total is zero. Only Paid orders are allocated.
+_Avoid_: Completed order, captured order, confirmed order
+
 **Allocation**:
 The assignment of one Voucher to one purchased unit of an order. A purchase of several units allocates several Vouchers, all or none.
 _Avoid_: Reservation, assignment, claim
@@ -83,7 +87,7 @@ The shortest time left, counted from the later of today and the start of its Val
 _Avoid_: Shelf life, grace period
 
 **Allocation failure**:
-A paid order for which not enough Available Vouchers existed at Allocation time. It requires a person to decide how to resolve it.
+A Paid order for which not enough Available Vouchers existed at Allocation time. It requires a person to decide how to resolve it.
 _Avoid_: Out of stock, failed order
 
 ### Reporting
