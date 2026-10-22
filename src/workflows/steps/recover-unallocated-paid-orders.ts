@@ -4,6 +4,7 @@ import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
 import { VOUCHER_MODULE } from "../../modules/voucher"
 import VoucherModuleService from "../../modules/voucher/service"
 import { allocateVouchersForPaidOrderWorkflow } from "../allocate-vouchers-for-paid-order"
+import { errorMessage } from "../utils/error-message"
 
 const MINUTE = 60 * 1000
 
@@ -35,13 +36,6 @@ async function handledOrderIds(service: VoucherModuleService, orderIds: string[]
   ])
 
   return new Set([...allocations, ...failures].map((row) => row.order_id))
-}
-
-// A failed workflow run rejects with the step's error as a plain object, not an Error.
-function errorMessage(error: unknown): string {
-  const message = (error as { message?: unknown } | null)?.message
-
-  return typeof message === "string" ? message : String(error)
 }
 
 async function voucherVariantIds(container: MedusaContainer) {

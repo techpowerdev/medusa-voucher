@@ -16,3 +16,6 @@ export enum AllocationFailureStatus {
   OPEN = "open",
   RESOLVED = "resolved",
 }
+
+// `resolved_by` of an Allocation failure closed because its order was allocated.
+export const ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM = "system"
