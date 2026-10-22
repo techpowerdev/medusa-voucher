@@ -74,7 +74,9 @@ The link between a Voucher product and its variant is a Medusa module link, so r
 
 Allocation starts on its own once an order is a Paid order: Medusa's payment status for the order is `captured`, or the order has a total of 0 and no payment collection (a cart with a total of 0 is completed without payment). The plugin's subscribers on `payment.captured` and `order.placed` run `allocateVouchersForPaidOrderWorkflow`, which checks this and then runs the allocation; a canceled, authorized, partly captured or refunded order is left alone. `order.placed` covers payment providers that capture when authorizing (such as Stripe with `capture: true`), which emit no `payment.captured`.
 
-Known gaps: if a subscriber fails (a database error, for example), Medusa's event bus does not retry it by default and nothing records the order, so a paid order can be left without Vouchers; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
+A scheduled job, `recover-unallocated-paid-orders`, runs every 15 minutes and catches Paid orders whose subscriber failed (Medusa's event bus does not retry a subscriber by default) or whose event never arrived: orders created between 7 days and 10 minutes ago with a Voucher product line and neither an Allocation nor an Allocation failure. It logs each order it recovers as a warning and each one it could not as an error, then tries those again on its next run. Medusa runs scheduled jobs only on a server whose `workerMode` is `worker` or `shared`, so keep at least one such instance; the workflow behind it, `recoverUnallocatedPaidOrdersWorkflow`, is exported too.
+
+Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 
 ## Importing vouchers
 
