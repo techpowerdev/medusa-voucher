@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products and automatic allocation of paid orders exist; delivery, retrying Allocation failures and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures exist; sending vouchers to customers and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
