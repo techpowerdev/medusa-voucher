@@ -4,7 +4,7 @@
 
 **Blocked by:** voucher-product 02 (Import vouchers against a Voucher product).
 
-**Status:** done (feature/voucher-allocation, pending review)
+**Status:** done (PR #10)
 
 - [x] Running the workflow for an order with enough Vouchers allocates exactly one Voucher per unit and marks them Allocated; each assignment records order, line item, unit number, customer and recipient email
 - [x] A short Pool allocates nothing for the order, leaves its Vouchers Available, and records an open Allocation failure with units requested and available; the order itself is untouched

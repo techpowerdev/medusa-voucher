@@ -70,5 +70,6 @@ When an order's payment has been captured, the system allocates one Available Vo
 ## Further Notes
 
 - **Open question, partial and manual capture:** capturing part of an order's payment must not release codes; the trigger should wait until the order is fully paid. Verify how Medusa reports full capture before building.
+- **Units available in an Allocation failure:** counted from the Vouchers that could be locked at that moment. Vouchers that a concurrent allocation holds are skipped, so while several orders compete the number can be lower than the Pool a moment later. It is a snapshot for the operator, not a stock figure.
 - **Open question, stock shown to shoppers:** Medusa's inventory does not know about the minimum remaining validity. Either maintain an inventory level from the Pool of eligible Vouchers, or compute availability through the plugin. Needs its own spec.
 - Valid-until is stored as the first instant a Voucher no longer applies (see the CSV import spec), so remaining validity is a plain difference of instants.
