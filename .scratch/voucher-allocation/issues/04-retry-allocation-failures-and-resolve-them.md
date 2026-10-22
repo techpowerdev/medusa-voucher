@@ -4,6 +4,8 @@
 
 **Blocked by:** 01 (Allocate Vouchers to an order, all or none).
 
+**Decided 2026-10-22 with the owner (Q1–Q6):** see Allocation failure and Retry in the allocation spec. Seams: `retryAllocationFailuresWorkflow` (oldest first, repeat, refunded order, automatic resolve) and the admin API over HTTP (list, retry, resolve, 401, 404, 422, no secrets).
+
 **Status:** ready-for-agent
 
 - [ ] An authenticated admin operation retries the open Allocation failures of a Voucher product
