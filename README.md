@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage and CSV import API exist; allocation, delivery and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products and automatic allocation of paid orders exist; delivery, retrying Allocation failures and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
@@ -70,7 +70,11 @@ The link between a Voucher product and its variant is a Medusa module link, so r
 
 - A Voucher qualifies when it is Available, not expired, and has at least `minimumRemainingValidityDays` whole days of validity left, counted from the later of now and its `valid_from` instant. The default is 0 (no minimum); expired Vouchers are never allocated.
 - The Vouchers that end soonest go first; those that never expire go last.
-- This workflow is not started by anything yet and is not safe against two orders being allocated at the same moment; do not call it from a payment event until that is added.
+- It is safe when several orders are allocated at the same moment (no Voucher goes to two orders) and when it runs again for the same order: an order that already has its Vouchers keeps them, and a line that is still short keeps one open Allocation failure.
+
+Allocation starts on its own once an order is fully paid, meaning Medusa's payment status for the order is `captured`. The plugin's subscribers on `payment.captured` and `order.placed` run `allocateVouchersForPaidOrderWorkflow`, which checks that status and then runs the allocation; an authorized, partly captured or refunded order is left alone. `order.placed` covers payment providers that capture when authorizing (such as Stripe with `capture: true`), which emit no `payment.captured`.
+
+Known gaps: if a subscriber fails (a database error, for example), Medusa's event bus does not retry it by default and nothing records the order, so a paid order can be left without Vouchers; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 
 ## Importing vouchers
 
