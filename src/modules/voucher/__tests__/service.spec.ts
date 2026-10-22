@@ -1,10 +1,16 @@
 import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
 import { VOUCHER_MODULE } from ".."
-import { AllocationFailureStatus, DeliveryStatus, VoucherStatus } from "../constants"
+import {
+  AllocationFailureStatus,
+  DeliveryChannel,
+  DeliveryStatus,
+  VoucherStatus,
+} from "../constants"
 import AllocationFailure from "../models/allocation-failure"
 import Voucher from "../models/voucher"
 import VoucherAllocation from "../models/voucher-allocation"
 import VoucherBatch from "../models/voucher-batch"
+import VoucherDelivery from "../models/voucher-delivery"
 import VoucherProduct from "../models/voucher-product"
 import VoucherModuleService from "../service"
 
@@ -28,7 +34,14 @@ const voucherInput = (n: number, batch_id: string) => ({
 
 moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
-  moduleModels: [Voucher, VoucherBatch, VoucherProduct, VoucherAllocation, AllocationFailure],
+  moduleModels: [
+    Voucher,
+    VoucherBatch,
+    VoucherProduct,
+    VoucherAllocation,
+    AllocationFailure,
+    VoucherDelivery,
+  ],
   resolve: "./src/modules/voucher",
   moduleOptions: { encryptionKey: "Xk3vQ9mZ2tLw7RfB5nYc8HdJ1sGpA4uE" },
   testSuite: ({ service }) => {
@@ -116,6 +129,69 @@ moduleIntegrationTestRunner<VoucherModuleService>({
         ).rejects.toThrow()
       })
 
+      describe("claiming a Delivery for sending", () => {
+        const claim = (recipient = "customer@example.test") =>
+          service.claimDelivery({ order_id: "order_1", channel: DeliveryChannel.EMAIL, recipient })
+
+        it("creates the order's Delivery on the channel and claims it", async () => {
+          const claimed = await claim()
+
+          expect(claimed).toEqual(
+            expect.objectContaining({
+              order_id: "order_1",
+              channel: DeliveryChannel.EMAIL,
+              recipient: "customer@example.test",
+              status: DeliveryStatus.SENDING,
+              attempts: 1,
+            })
+          )
+          expect(await service.listVoucherDeliveries({ order_id: "order_1" })).toHaveLength(1)
+        })
+
+        it("claims a failed Delivery again, counting the attempt and taking the new recipient", async () => {
+          const first = await claim()
+          await service.updateVoucherDeliveries({ id: first!.id, status: DeliveryStatus.FAILED })
+
+          const again = await claim("new@example.test")
+
+          expect(again).toEqual(
+            expect.objectContaining({
+              id: first!.id,
+              status: DeliveryStatus.SENDING,
+              attempts: 2,
+              recipient: "new@example.test",
+            })
+          )
+        })
+
+        it("refuses a Delivery that is being sent or was delivered", async () => {
+          const first = await claim()
+          expect(await claim()).toBeNull()
+
+          await service.updateVoucherDeliveries({ id: first!.id, status: DeliveryStatus.DELIVERED })
+          expect(await claim()).toBeNull()
+          const [stored] = await service.listVoucherDeliveries({ id: first!.id })
+          expect(stored.attempts).toBe(1)
+        })
+
+        it("lets only one of two concurrent claims succeed", async () => {
+          const results = await Promise.all([claim(), claim()])
+
+          expect(results.filter(Boolean)).toHaveLength(1)
+          const deliveries = await service.listVoucherDeliveries({ order_id: "order_1" })
+          expect(deliveries).toHaveLength(1)
+          expect(deliveries[0].attempts).toBe(1)
+        })
+
+        it("keeps one Delivery per order and channel", async () => {
+          await claim()
+
+          await expect(
+            service.createVoucherDeliveries({ order_id: "order_1", channel: DeliveryChannel.EMAIL })
+          ).rejects.toThrow()
+        })
+      })
+
       it("allocates a voucher to an order line item once", async () => {
         const batch = await service.createVoucherBatches(batchInput)
         const voucher = await service.createVouchers(voucherInput(1, batch.id))
@@ -127,9 +203,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
           unit_index: 1,
         })
 
-        expect(allocation.delivery_status).toBe(DeliveryStatus.PENDING)
-        expect(allocation.delivery_channel).toBe("email")
-        expect(allocation.delivery_attempts).toBe(0)
+        expect(allocation).toEqual(expect.objectContaining({ voucher_id: voucher.id, unit_index: 1 }))
 
         await expect(
           service.createVoucherAllocations({

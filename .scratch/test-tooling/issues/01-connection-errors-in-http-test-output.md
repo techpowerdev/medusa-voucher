@@ -8,3 +8,7 @@
 
 - [ ] The source of the message is identified
 - [ ] Either it no longer appears, or a note here explains why it is expected
+
+## Comments
+
+- 2026-10-23, lead (read, not proved): `medusaIntegrationTestRunner` restores the database from a template before every test (`@medusajs/test-utils/dist/medusa-test-runner.js`, `beforeEach` → `dbUtils.restore`), which would end the application's open pool connections; that matches one burst of messages per test.

@@ -6,10 +6,17 @@ export enum VoucherStatus {
   VOID = "void",
 }
 
+// The state of one order's Delivery on one channel.
 export enum DeliveryStatus {
   PENDING = "pending",
+  SENDING = "sending",
   DELIVERED = "delivered",
   FAILED = "failed",
+}
+
+// How a Delivery reaches the customer; LINE is planned (see the delivery spec).
+export enum DeliveryChannel {
+  EMAIL = "email",
 }
 
 export enum AllocationFailureStatus {

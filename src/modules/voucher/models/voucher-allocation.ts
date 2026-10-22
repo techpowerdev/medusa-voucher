@@ -1,9 +1,9 @@
 import { model } from "@medusajs/framework/utils"
-import { DeliveryStatus } from "../constants"
 import Voucher from "./voucher"
 
-// One Voucher assigned to one purchased unit of an order line item. A Replacement
-// creates a new allocation that points back to the one it replaces.
+// One Voucher assigned to one purchased unit of an order line item. A Replacement creates a
+// new allocation that points back to the one it replaces. How it reaches the customer is
+// recorded on the order's Delivery (ADR-0004).
 const VoucherAllocation = model
   .define("voucher_allocation", {
     id: model.id({ prefix: "valloc" }).primaryKey(),
@@ -13,11 +13,6 @@ const VoucherAllocation = model
     unit_index: model.number(),
     customer_id: model.text().nullable(),
     recipient_email: model.text().nullable(),
-    delivery_channel: model.text().default("email"),
-    delivery_status: model.enum(DeliveryStatus).default(DeliveryStatus.PENDING),
-    delivery_attempts: model.number().default(0),
-    delivery_error: model.text().nullable(),
-    delivered_at: model.dateTime().nullable(),
     replaces_allocation_id: model.text().nullable(),
     replacement_reason: model.text().nullable(),
     replaced_by: model.text().nullable(),

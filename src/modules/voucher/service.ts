@@ -4,18 +4,22 @@ import {
   InjectManager,
   InjectTransactionManager,
   MedusaContext,
+  generateEntityId,
   MedusaError,
   MedusaService,
 } from "@medusajs/framework/utils"
 import {
   ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM,
   AllocationFailureStatus,
+  DeliveryChannel,
+  DeliveryStatus,
   VoucherStatus,
 } from "./constants"
 import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
 import VoucherBatch from "./models/voucher-batch"
+import VoucherDelivery from "./models/voucher-delivery"
 import VoucherProduct from "./models/voucher-product"
 import {
   AllocatedVoucher,
@@ -37,6 +41,19 @@ import {
 // Hashes are looked up in chunks so a very large import never exceeds the database's
 // limit on query parameters.
 const LOOKUP_CHUNK_SIZE = 1000
+
+// The knex transaction of the current context, required by statements whose checks must hold
+// under concurrency: outside a transaction they would not hold at all.
+function transactionKnex(sharedContext: Context, caller: string) {
+  const manager = sharedContext.transactionManager as SqlEntityManager | undefined
+  const knex = manager?.getTransactionContext()
+
+  if (!knex) {
+    throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, `${caller} must run inside a transaction.`)
+  }
+
+  return knex
+}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = []
@@ -78,6 +95,7 @@ class VoucherModuleService extends MedusaService({
   VoucherProduct,
   VoucherAllocation,
   AllocationFailure,
+  VoucherDelivery,
 }) {
   protected crypto_: VoucherCrypto
   protected timezone_: string
@@ -472,16 +490,7 @@ class VoucherModuleService extends MedusaService({
     resolution: { resolved_by: string; note: string },
     @MedusaContext() sharedContext: Context = {}
   ): Promise<string[]> {
-    const manager = sharedContext.transactionManager as SqlEntityManager | undefined
-    const knex = manager?.getTransactionContext()
-
-    if (!knex) {
-      throw new MedusaError(
-        MedusaError.Types.UNEXPECTED_STATE,
-        "resolveOpenFailures_ must run inside a transaction."
-      )
-    }
-
+    const knex = transactionKnex(sharedContext, "resolveOpenFailures_")
     const now = new Date()
     const rows: { id: string }[] = await knex("allocation_failure")
       .where({ ...where, status: AllocationFailureStatus.OPEN, deleted_at: null })
@@ -495,6 +504,56 @@ class VoucherModuleService extends MedusaService({
       .returning("id")
 
     return rows.map((row) => row.id)
+  }
+
+  /**
+   * Claims an order's Delivery on a channel for sending, creating it when there is none: it
+   * moves a pending or failed Delivery to sending, counts the attempt and records the
+   * recipient. Returns the claimed Delivery, or null when another caller holds it or it was
+   * delivered. Only the caller that gets a Delivery back may send.
+   */
+  @InjectManager()
+  async claimDelivery(
+    input: { order_id: string; channel: DeliveryChannel; recipient: string | null },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    return await this.claimDelivery_(input, sharedContext)
+  }
+
+  // The insert ignores an existing row and the claim is one conditional UPDATE, so of two
+  // concurrent callers only one moves the row to sending. The generated update methods read
+  // the rows first and would let both win (see resolveOpenFailures_).
+  @InjectTransactionManager()
+  protected async claimDelivery_(
+    input: { order_id: string; channel: DeliveryChannel; recipient: string | null },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    const knex = transactionKnex(sharedContext, "claimDelivery_")
+    const now = new Date()
+
+    await knex.raw(
+      `insert into "voucher_delivery" ("id", "order_id", "channel", "recipient", "status", "attempts", "created_at", "updated_at")
+       values (?, ?, ?, ?, ?, 0, ?, ?)
+       on conflict ("order_id", "channel") where "deleted_at" is null do nothing`,
+      [generateEntityId(undefined, "vdel"), input.order_id, input.channel, input.recipient, DeliveryStatus.PENDING, now, now]
+    )
+
+    const rows: { id: string }[] = await knex("voucher_delivery")
+      .where({ order_id: input.order_id, channel: input.channel, deleted_at: null })
+      .whereIn("status", [DeliveryStatus.PENDING, DeliveryStatus.FAILED])
+      .update({
+        status: DeliveryStatus.SENDING,
+        attempts: knex.raw("attempts + 1"),
+        recipient: input.recipient,
+        updated_at: now,
+      })
+      .returning("id")
+
+    if (!rows.length) {
+      return null
+    }
+
+    return await this.retrieveVoucherDelivery(rows[0].id, {}, sharedContext)
   }
 
   /** Decrypts the code and PIN of a voucher. Callers decide who may see them. */
