@@ -7,7 +7,7 @@ import {
   MedusaError,
   MedusaService,
 } from "@medusajs/framework/utils"
-import { VoucherStatus } from "./constants"
+import { AllocationFailureStatus, VoucherStatus } from "./constants"
 import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
@@ -215,13 +215,32 @@ class VoucherModuleService extends MedusaService({
     try {
       return await this.allocateVouchers_(input, sharedContext)
     } catch (error) {
-      // A concurrent run for the same order committed first and the unique unit of a line
-      // item rejected this one, whose transaction rolled back: return what the winner made.
+      // A concurrent run for the same order committed first and a unique index (the unit of
+      // a line item, or the open failure of a line) rejected this one, whose transaction
+      // rolled back: return what the winner made.
       if (isUniqueViolation(error)) {
         const existing = await this.listOrderAllocations_(input.order_id, sharedContext)
 
         if (existing.length) {
           return { allocated: existing, failures: [] }
+        }
+
+        const open = await this.listAllocationFailures(
+          { order_id: input.order_id, status: AllocationFailureStatus.OPEN },
+          {},
+          sharedContext
+        )
+
+        if (open.length) {
+          return {
+            allocated: [],
+            failures: open.map((failure) => ({
+              order_line_item_id: failure.order_line_item_id,
+              variant_id: failure.variant_id,
+              requested: failure.quantity_requested,
+              available: failure.quantity_available,
+            })),
+          }
         }
       }
 
@@ -268,8 +287,20 @@ class VoucherModuleService extends MedusaService({
     }
 
     if (failures.length) {
+      // A line already waiting on an open failure keeps that one, so a repeated run while
+      // the Pool is still short adds nothing.
+      const open = await this.listAllocationFailures(
+        {
+          order_line_item_id: failures.map((failure) => failure.order_line_item_id),
+          status: AllocationFailureStatus.OPEN,
+        },
+        { select: ["order_line_item_id"] },
+        sharedContext
+      )
+      const waiting = new Set(open.map((failure) => failure.order_line_item_id))
+
       await this.createAllocationFailures(
-        failures.map((failure) => ({
+        failures.filter((failure) => !waiting.has(failure.order_line_item_id)).map((failure) => ({
           order_id: input.order_id,
           order_line_item_id: failure.order_line_item_id,
           variant_id: failure.variant_id,
