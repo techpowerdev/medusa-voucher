@@ -1,3 +1,4 @@
+import { SqlEntityManager } from "@medusajs/framework/mikro-orm/knex"
 import { Context } from "@medusajs/framework/types"
 import {
   InjectManager,
@@ -21,7 +22,6 @@ import {
   VoucherModuleOptions,
 } from "./types"
 import { parseVoucherCsv } from "./utils/parse-voucher-csv"
-import { hasEnoughValidityLeft } from "./utils/validity"
 import { DEFAULT_TIMEZONE } from "./utils/timezone"
 import {
   codeHint,
@@ -204,14 +204,29 @@ class VoucherModuleService extends MedusaService({
   /**
    * Allocates one Available Voucher to each purchased unit of the given lines, all or none:
    * when any line cannot be covered nothing is allocated and an Allocation failure is
-   * recorded for each short line. Never decrypts a code.
+   * recorded for each short line. Running it again for an order that is already allocated
+   * returns its Allocations unchanged. Never decrypts a code.
    */
   @InjectManager()
   async allocateVouchers(
     input: AllocateVouchersInput,
     @MedusaContext() sharedContext: Context = {}
   ): Promise<AllocateVouchersResult> {
-    return await this.allocateVouchers_(input, sharedContext)
+    try {
+      return await this.allocateVouchers_(input, sharedContext)
+    } catch (error) {
+      // A concurrent run for the same order committed first and the unique unit of a line
+      // item rejected this one, whose transaction rolled back: return what the winner made.
+      if (isUniqueViolation(error)) {
+        const existing = await this.listOrderAllocations_(input.order_id, sharedContext)
+
+        if (existing.length) {
+          return { allocated: existing, failures: [] }
+        }
+      }
+
+      throw error
+    }
   }
 
   @InjectTransactionManager()
@@ -219,6 +234,14 @@ class VoucherModuleService extends MedusaService({
     input: AllocateVouchersInput,
     @MedusaContext() sharedContext: Context = {}
   ): Promise<AllocateVouchersResult> {
+    // Allocation is all or none per order, so an order that already has its Allocations is
+    // complete: a repeated run returns them unchanged.
+    const existing = await this.listOrderAllocations_(input.order_id, sharedContext)
+
+    if (existing.length) {
+      return { allocated: existing, failures: [] }
+    }
+
     const taken = new Set<string>()
     const picks: { line: AllocateVouchersInput["lines"][number]; voucherIds: string[] }[] = []
     const failures: AllocationShortfall[] = []
@@ -286,8 +309,31 @@ class VoucherModuleService extends MedusaService({
     return { allocated, failures: [] }
   }
 
-  // The Vouchers of a variant that can be allocated now, best first: Available and not
-  // expired, the earliest valid-until first with those that never expire last.
+  // The Allocations that serve an order's units for the first time (Replacements excluded).
+  @InjectTransactionManager()
+  protected async listOrderAllocations_(
+    orderId: string,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<AllocatedVoucher[]> {
+    const allocations = await this.listVoucherAllocations(
+      { order_id: orderId, replaces_allocation_id: null },
+      { select: ["id", "voucher_id", "order_line_item_id", "unit_index"] },
+      sharedContext
+    )
+
+    return allocations.map((allocation) => ({
+      allocation_id: allocation.id,
+      voucher_id: allocation.voucher_id,
+      order_line_item_id: allocation.order_line_item_id,
+      unit_index: allocation.unit_index,
+    }))
+  }
+
+  // Locks and returns up to `quantity` Vouchers of a variant that can be allocated now, best
+  // first: Available, not expired and with at least the minimum remaining validity counted
+  // from the later of now and its start; the earliest valid-until first, never-expiring last.
+  // Rows other transactions hold are skipped, so concurrent orders get different Vouchers
+  // without waiting on each other. The locks last until the transaction ends.
   @InjectTransactionManager()
   protected async findEligibleVoucherIds_(
     variantId: string,
@@ -295,42 +341,43 @@ class VoucherModuleService extends MedusaService({
     taken: Set<string>,
     @MedusaContext() sharedContext: Context = {}
   ): Promise<string[]> {
-    const now = new Date()
-    const found: string[] = []
-    const PAGE_SIZE = 200
+    // A FOR UPDATE on a pooled (autocommit) connection would release the lock at once and
+    // let two orders take the same Voucher, so fail instead of falling back, as Medusa's
+    // payment module does when it locks a payment for capture.
+    const manager = sharedContext.transactionManager as SqlEntityManager | undefined
+    const knex = manager?.getTransactionContext()
 
-    for (let skip = 0; found.length < quantity; skip += PAGE_SIZE) {
-      const page = await this.listVouchers(
-        {
-          variant_id: variantId,
-          status: VoucherStatus.AVAILABLE,
-          $or: [{ valid_until: null }, { valid_until: { $gt: now } }],
-        },
-        {
-          select: ["id", "valid_from", "valid_until"],
-          order: { valid_until: "ASC", created_at: "ASC" },
-          take: PAGE_SIZE,
-          skip,
-        },
-        sharedContext
+    if (!knex) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "findEligibleVoucherIds_ must run inside a transaction to lock the Vouchers it picks."
       )
-
-      if (!page.length) {
-        break
-      }
-
-      for (const voucher of page) {
-        if (
-          !taken.has(voucher.id) &&
-          found.length < quantity &&
-          hasEnoughValidityLeft(voucher, now, this.minimumRemainingValidityDays_)
-        ) {
-          found.push(voucher.id)
-        }
-      }
     }
 
-    return found
+    const now = new Date()
+
+    await knex.raw("SET LOCAL lock_timeout = '3s'")
+    const rows: { id: string }[] = await knex("voucher")
+      .select("id")
+      .where({ variant_id: variantId, status: VoucherStatus.AVAILABLE, deleted_at: null })
+      .whereNotIn("id", [...taken])
+      .where((eligible) =>
+        eligible.whereNull("valid_until").orWhere((ends) =>
+          ends
+            .where("valid_until", ">", now)
+            .whereRaw("valid_until - greatest(?::timestamptz, coalesce(valid_from, ?::timestamptz)) >= make_interval(days => ?)", [
+              now,
+              now,
+              this.minimumRemainingValidityDays_,
+            ])
+        )
+      )
+      .orderByRaw("valid_until asc nulls last, created_at asc")
+      .limit(quantity)
+      .forUpdate()
+      .skipLocked()
+
+    return rows.map((row) => row.id)
   }
 
   /** Decrypts the code and PIN of a voucher. Callers decide who may see them. */
