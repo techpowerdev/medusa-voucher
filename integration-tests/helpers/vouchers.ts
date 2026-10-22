@@ -81,3 +81,11 @@ export async function authorizeOrderPayment(
 
   return payment
 }
+
+// Authorizes and captures the whole amount, through the Payment module (no event).
+export async function payOrderInFull(container: MedusaContainer, orderId: string, amount: number) {
+  const payment = await authorizeOrderPayment(container, orderId, amount)
+  await container.resolve(Modules.PAYMENT).capturePayment({ payment_id: payment.id, amount })
+
+  return payment
+}

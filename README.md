@@ -76,6 +76,16 @@ Allocation starts on its own once an order is a Paid order: Medusa's payment sta
 
 A scheduled job, `recover-unallocated-paid-orders`, runs every 15 minutes and catches Paid orders whose subscriber failed (Medusa's event bus does not retry a subscriber by default) or whose event never arrived: orders created between 7 days and 10 minutes ago with a Voucher product line and neither an Allocation nor an Allocation failure. It logs each order it recovers as a warning and each one it could not as an error, then tries those again on its next run. Medusa runs scheduled jobs only on a server whose `workerMode` is `worker` or `shared`, so keep at least one such instance; the workflow behind it, `recoverUnallocatedPaidOrdersWorkflow`, is exported too.
 
+### Allocation failures
+
+When a Voucher product's Pool cannot cover a Paid order, nothing is allocated and an open Allocation failure is recorded for each short line. After importing more Vouchers, an operator retries them (admin authentication):
+
+- `GET /admin/allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded.
+- `POST /admin/voucher-products/:id/retry-allocation-failures` tries each order waiting on that Voucher product once, oldest first, with the same all-or-none rule and the Paid order check as a new order, and returns `{ allocated, still_open, failed }` (order ids). An order also short on another Voucher product, or refunded or canceled while it waited, stays open. An order whose allocation throws is logged as an error and listed in `failed`; the others are still tried.
+- `POST /admin/allocation-failures/:id/resolve` with a `note` closes one failure settled another way (a refund, for example) and records the admin and the time. A failure already resolved is refused (422); an unknown one is 404.
+
+An order that gets its Vouchers by any route (a retry, a subscriber or the recovery job) has its open failures resolved automatically, with `resolved_by` set to `system`.
+
 Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 
 ## Importing vouchers

@@ -7,7 +7,11 @@ import {
   MedusaError,
   MedusaService,
 } from "@medusajs/framework/utils"
-import { AllocationFailureStatus, VoucherStatus } from "./constants"
+import {
+  ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM,
+  AllocationFailureStatus,
+  VoucherStatus,
+} from "./constants"
 import AllocationFailure from "./models/allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
@@ -330,6 +334,13 @@ class VoucherModuleService extends MedusaService({
     )
     const created = await this.createVoucherAllocations(rows, sharedContext)
 
+    // The order is served now, so whatever it was waiting on is settled, however it got here.
+    await this.resolveOpenFailures_(
+      { order_id: input.order_id },
+      { resolved_by: ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM, note: "Allocated" },
+      sharedContext
+    )
+
     const allocated: AllocatedVoucher[] = created.map((allocation, index) => ({
       allocation_id: allocation.id,
       voucher_id: rows[index].voucher_id,
@@ -407,6 +418,81 @@ class VoucherModuleService extends MedusaService({
       .limit(quantity)
       .forUpdate()
       .skipLocked()
+
+    return rows.map((row) => row.id)
+  }
+
+  /**
+   * Closes one open Allocation failure settled by a person, with their note and identity.
+   * Refused when it is unknown (404) or already resolved (422).
+   */
+  @InjectManager()
+  async resolveAllocationFailure(
+    input: { id: string; note: string; resolved_by: string },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    return await this.resolveAllocationFailure_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async resolveAllocationFailure_(
+    input: { id: string; note: string; resolved_by: string },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    const resolved = await this.resolveOpenFailures_(
+      { id: input.id },
+      { resolved_by: input.resolved_by, note: input.note },
+      sharedContext
+    )
+
+    if (resolved.length) {
+      return await this.retrieveAllocationFailure(input.id, {}, sharedContext)
+    }
+
+    const [existing] = await this.listAllocationFailures(
+      { id: input.id },
+      { select: ["id"] },
+      sharedContext
+    )
+
+    throw existing
+      ? new MedusaError(
+          MedusaError.Types.DUPLICATE_ERROR,
+          `Allocation failure ${input.id} is already resolved`
+        )
+      : new MedusaError(MedusaError.Types.NOT_FOUND, `Allocation failure ${input.id} was not found`)
+  }
+
+  // Marks the open failures matching `where` resolved and returns their ids. The status check
+  // and the change are one UPDATE, so of two concurrent callers only one changes a failure:
+  // the generated `updateAllocationFailures` reads the rows first and would let both win.
+  @InjectTransactionManager()
+  protected async resolveOpenFailures_(
+    where: { id?: string; order_id?: string },
+    resolution: { resolved_by: string; note: string },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<string[]> {
+    const manager = sharedContext.transactionManager as SqlEntityManager | undefined
+    const knex = manager?.getTransactionContext()
+
+    if (!knex) {
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        "resolveOpenFailures_ must run inside a transaction."
+      )
+    }
+
+    const now = new Date()
+    const rows: { id: string }[] = await knex("allocation_failure")
+      .where({ ...where, status: AllocationFailureStatus.OPEN, deleted_at: null })
+      .update({
+        status: AllocationFailureStatus.RESOLVED,
+        resolved_at: now,
+        resolved_by: resolution.resolved_by,
+        resolution_note: resolution.note,
+        updated_at: now,
+      })
+      .returning("id")
 
     return rows.map((row) => row.id)
   }
