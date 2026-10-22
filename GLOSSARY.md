@@ -63,7 +63,7 @@ A Voucher assigned to an order but not yet confirmed as received by the customer
 _Avoid_: Reserved, sold
 
 **Delivery**:
-Sending the Voucher code of an Allocation to the customer through a channel, as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried.
+Sending the Voucher codes of an order's Allocations to the customer together, in one message through a channel, each as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried.
 _Avoid_: Dispatch, fulfilment, shipment
 
 **Delivered**:
@@ -105,7 +105,7 @@ _Avoid_: Near expiry
 - A **Partner** issues many **Vouchers**; each **Voucher** belongs to exactly one **Voucher batch** and one **Voucher product**.
 - A **Voucher batch** is a purchase for one **Voucher product** and contains its **Vouchers**. A **Voucher product** is a variant of the Medusa product that stands for one **Partner**.
 - A **Pool** is the set of **Vouchers** of one **Voucher product**.
-- An **Allocation** links one **Voucher** to one purchased unit of an order; a **Delivery** sends the code of that **Allocation**.
+- An **Allocation** links one **Voucher** to one purchased unit of an order; a **Delivery** sends the codes of an order's **Allocations** in one message.
 
 ## Boundaries
 
