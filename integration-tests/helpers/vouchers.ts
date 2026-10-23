@@ -23,13 +23,15 @@ export async function createVoucherProductVariant(
 export async function stockVouchers(
   container: MedusaContainer,
   product: { variantId: string; voucherProductId: string },
-  vouchers: VoucherCodeInput[]
+  vouchers: VoucherCodeInput[],
+  batchFields: { redemption_instructions?: string | null } = {}
 ) {
   const service: VoucherModuleService = container.resolve(VOUCHER_MODULE)
   const batch = await service.createVoucherBatches({
     voucher_product_id: product.voucherProductId,
     variant_id: product.variantId,
     purchased_at: new Date(),
+    ...batchFields,
   })
 
   return service.createVouchersFromCodes({ batch_id: batch.id, vouchers })
@@ -37,11 +39,16 @@ export async function stockVouchers(
 
 export type OrderLine = { variant_id: string; quantity: number; unit_price?: number }
 
-// An order with one line item per entry, through the Order module.
-export async function createOrder(container: MedusaContainer, lines: OrderLine[]) {
+// An order with one line item per entry, through the Order module. `email: null` creates an
+// order without an email address.
+export async function createOrder(
+  container: MedusaContainer,
+  lines: OrderLine[],
+  { email = "customer@example.test" }: { email?: string | null } = {}
+) {
   const order = await container.resolve(Modules.ORDER).createOrders({
     currency_code: "thb",
-    email: "customer@example.test",
+    email: email ?? undefined,
     items: lines.map((line, index) => ({
       title: `Line ${index + 1}`,
       variant_id: line.variant_id,

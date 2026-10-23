@@ -27,6 +27,7 @@ import {
   AllocateVouchersResult,
   AllocationShortfall,
   VoucherCodeInput,
+  VoucherEmailRenderer,
   VoucherModuleOptions,
 } from "./types"
 import { parseVoucherCsv } from "./utils/parse-voucher-csv"
@@ -100,6 +101,7 @@ class VoucherModuleService extends MedusaService({
   protected crypto_: VoucherCrypto
   protected timezone_: string
   protected minimumRemainingValidityDays_: number
+  protected emailRenderer_: VoucherEmailRenderer | null
 
   constructor(container: Record<string, unknown>, options: VoucherModuleOptions) {
     // @ts-ignore
@@ -108,6 +110,12 @@ class VoucherModuleService extends MedusaService({
     this.crypto_ = createVoucherCrypto(options?.encryptionKey)
     this.timezone_ = options?.timezone ?? DEFAULT_TIMEZONE
     this.minimumRemainingValidityDays_ = options?.minimumRemainingValidityDays ?? 0
+    this.emailRenderer_ = options?.delivery?.renderers?.email ?? null
+  }
+
+  /** The options a Delivery is rendered with; `email` is null when the store has no renderer. */
+  async getDeliverySettings() {
+    return { timezone: this.timezone_, renderers: { email: this.emailRenderer_ } }
   }
 
   /** Reads a vouchers CSV, turning its dates into whole days in the configured time zone. */
@@ -554,6 +562,45 @@ class VoucherModuleService extends MedusaService({
     }
 
     return await this.retrieveVoucherDelivery(rows[0].id, {}, sharedContext)
+  }
+
+  /**
+   * Records that the email provider accepted a claimed Delivery: it becomes delivered and the
+   * Vouchers it sent become Delivered, together.
+   */
+  @InjectManager()
+  async completeDelivery(
+    input: { id: string; voucher_ids: string[] },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    await this.completeDelivery_(input, sharedContext)
+  }
+
+  @InjectTransactionManager()
+  protected async completeDelivery_(
+    input: { id: string; voucher_ids: string[] },
+    @MedusaContext() sharedContext: Context = {}
+  ) {
+    await this.updateVoucherDeliveries(
+      { id: input.id, status: DeliveryStatus.DELIVERED, delivered_at: new Date(), last_error: null },
+      sharedContext
+    )
+    await this.updateVouchers(
+      input.voucher_ids.map((id) => ({ id, status: VoucherStatus.DELIVERED })),
+      sharedContext
+    )
+  }
+
+  /**
+   * Records that a claimed Delivery was not sent; its Vouchers stay Allocated with the order.
+   * `error` is stored as given, so it must not contain a code, PIN or hash.
+   */
+  async failDelivery(input: { id: string; error: string }) {
+    await this.updateVoucherDeliveries({
+      id: input.id,
+      status: DeliveryStatus.FAILED,
+      last_error: input.error,
+    })
   }
 
   /** Decrypts the code and PIN of a voucher. Callers decide who may see them. */

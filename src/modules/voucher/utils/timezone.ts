@@ -44,3 +44,14 @@ export function startOfDay(year: number, month: number, day: number, timeZone: s
 
   return new Date(second)
 }
+
+/** The calendar date (`YYYY-MM-DD`) that contains the instant in `timeZone`. */
+export function dayOf(instant: Date, timeZone: string): string {
+  // en-CA formats a date as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant)
+}

@@ -17,7 +17,56 @@ export type VoucherModuleOptions = {
    * expired Vouchers are never allocated either way).
    */
   minimumRemainingValidityDays?: number
+  delivery?: {
+    /**
+     * Replaces the plugin's default email (English) with the store's own, per channel. It
+     * receives the order and its Vouchers with their codes and returns the subject, HTML
+     * and plain text. Refer to each Voucher's QR code in the HTML as `cid:<qr_code_cid>`,
+     * and keep the codes as text so a blocked image never hides them.
+     */
+    renderers?: {
+      email?: VoucherEmailRenderer
+    }
+  }
 }
+
+// What a Delivery email is about: the order and its Vouchers, with their codes revealed.
+export type VoucherEmailOrder = {
+  id: string
+  display_id: number
+  email: string
+}
+
+export type VoucherEmailVoucher = {
+  code: string
+  // Only some Partners issue a PIN.
+  pin: string | null
+  // The Medusa product's title.
+  partner: string
+  face_value: number
+  currency_code: string
+  // Whole days (`YYYY-MM-DD`) in the store's timezone; null when that end is open.
+  first_day: string | null
+  last_day: string | null
+  redemption_instructions: string | null
+  // Content id of the QR code's inline image attachment: refer to it as `cid:<id>`.
+  qr_code_cid: string
+}
+
+export type VoucherEmailInput = {
+  order: VoucherEmailOrder
+  vouchers: VoucherEmailVoucher[]
+}
+
+export type RenderedVoucherEmail = {
+  subject: string
+  html: string
+  text: string
+}
+
+export type VoucherEmailRenderer = (
+  input: VoucherEmailInput
+) => RenderedVoucherEmail | Promise<RenderedVoucherEmail>
 
 export type VoucherCodeInput = {
   code: string
