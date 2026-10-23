@@ -12,7 +12,7 @@ importers:
         specifier: 7.0.3
         version: 7.0.3
       qrcode:
-        specifier: ^1.5.4
+        specifier: 1.5.4
         version: 1.5.4
     devDependencies:
       '@medusajs/admin-sdk':
