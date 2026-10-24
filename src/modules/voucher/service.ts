@@ -28,12 +28,14 @@ import {
   AllocationShortfall,
   emptyPoolCounts,
   PoolCounts,
+  PoolStatus,
+  PoolVoucher,
   VoucherCodeInput,
   VoucherEmailRenderer,
   VoucherModuleOptions,
 } from "./types"
 import { parseVoucherCsv } from "./utils/parse-voucher-csv"
-import { DEFAULT_TIMEZONE } from "./utils/timezone"
+import { dayOf, DEFAULT_TIMEZONE, lastDayOf } from "./utils/timezone"
 import {
   codeHint,
   createVoucherCrypto,
@@ -460,64 +462,133 @@ class VoucherModuleService extends MedusaService({
 
   // Whether an `available` Voucher can still be sold at `now` (Available in GLOSSARY.md): its
   // Validity period has not ended and it has at least the Minimum remaining validity counted
-  // from the later of now and its start. Allocation and the Pool counts share it.
-  protected sellableClause_(now: Date): [string, (Date | number)[]] {
+  // from the later of now and its start. Allocation, the Pool counts and lists share it.
+  // `table` qualifies the columns when the Voucher table is joined.
+  protected sellableClause_(now: Date, table = ""): [string, (Date | number)[]] {
+    const column = (name: string) => (table ? `${table}.${name}` : name)
+
     return [
-      "(valid_until is null or (valid_until > ? and valid_until - greatest(?::timestamptz, coalesce(valid_from, ?::timestamptz)) >= make_interval(days => ?)))",
+      `(${column("valid_until")} is null or (${column("valid_until")} > ? and ${column("valid_until")} - greatest(?::timestamptz, coalesce(${column("valid_from")}, ?::timestamptz)) >= make_interval(days => ?)))`,
       [now, now, now, this.minimumRemainingValidityDays_],
     ]
   }
 
+  // A Voucher's place in its Pool at `now` (a `PoolStatus`): its status, except that an
+  // `available` Voucher that can no longer be sold is `expired` once its Validity period has
+  // ended and `under_minimum` before that.
+  protected poolStatusSql_(now: Date, table = ""): [string, (Date | number | string)[]] {
+    const column = (name: string) => (table ? `${table}.${name}` : name)
+    const [sellable, sellableBindings] = this.sellableClause_(now, table)
+
+    return [
+      `(case when ${column("status")} = ? and ${sellable} then ? ` +
+        `when ${column("status")} = ? and ${column("valid_until")} <= ? then ? ` +
+        `when ${column("status")} = ? then ? else ${column("status")}::text end)`,
+      [
+        VoucherStatus.AVAILABLE,
+        ...sellableBindings,
+        "available",
+        VoucherStatus.AVAILABLE,
+        now,
+        "expired",
+        VoucherStatus.AVAILABLE,
+        "under_minimum",
+      ],
+    ]
+  }
+
   /**
-   * Counts the Pool of each of `variantIds` at `now`: Available (can still be sold), Expired
-   * (past its Validity period), under the Minimum remaining validity, Allocated, Delivered
-   * and Void. Computed when read; no status changes. A variant without Vouchers counts zeros.
+   * Counts the Pool of each Voucher product variant (`by: "variant"`) or Voucher batch
+   * (`by: "batch"`) in `ids` at `now`: Available (can still be sold), Expired (past its
+   * Validity period), under the Minimum remaining validity, Allocated, Delivered and Void.
+   * Computed when read; no status changes. An id without Vouchers counts zeros.
    */
   @InjectManager()
-  async countPoolByVariant(
-    variantIds: string[],
+  async countPool(
+    by: "variant" | "batch",
+    ids: string[],
     now: Date = new Date(),
     @MedusaContext() sharedContext: Context = {}
   ): Promise<Map<string, PoolCounts>> {
-    const counts = new Map<string, PoolCounts>(variantIds.map((id) => [id, emptyPoolCounts()]))
+    const counts = new Map<string, PoolCounts>(ids.map((id) => [id, emptyPoolCounts()]))
 
-    if (!variantIds.length) {
+    if (!ids.length) {
       return counts
     }
 
+    const key = by === "variant" ? "variant_id" : "batch_id"
     const knex = (sharedContext.manager as SqlEntityManager).getKnex()
-    const [sellable, sellableBindings] = this.sellableClause_(now)
-    const rows: Record<keyof PoolCounts | "variant_id", string>[] = await knex("voucher")
-      .select("variant_id")
-      .select(
-        knex.raw(`count(*) filter (where status = ? and ${sellable})::int as available`, [
-          VoucherStatus.AVAILABLE,
-          ...sellableBindings,
-        ]),
-        knex.raw(
-          "count(*) filter (where status = ? or (status = ? and valid_until <= ?))::int as expired",
-          [VoucherStatus.EXPIRED, VoucherStatus.AVAILABLE, now]
-        ),
-        knex.raw(
-          `count(*) filter (where status = ? and valid_until > ? and not ${sellable})::int as under_minimum`,
-          [VoucherStatus.AVAILABLE, now, ...sellableBindings]
-        ),
-        knex.raw("count(*) filter (where status = ?)::int as allocated", [VoucherStatus.ALLOCATED]),
-        knex.raw("count(*) filter (where status = ?)::int as delivered", [VoucherStatus.DELIVERED]),
-        knex.raw("count(*) filter (where status = ?)::int as void", [VoucherStatus.VOID])
-      )
-      .whereIn("variant_id", variantIds)
+    const [poolStatus, bindings] = this.poolStatusSql_(now)
+    const rows: { key: string; pool_status: PoolStatus; total: number }[] = await knex("voucher")
+      .select(`${key} as key`, knex.raw(`${poolStatus} as pool_status`, bindings), knex.raw("count(*)::int as total"))
+      .whereIn(key, ids)
       .whereNull("deleted_at")
-      .groupBy("variant_id")
+      .groupByRaw(`${key}, pool_status`)
 
-    for (const { variant_id, ...row } of rows) {
-      counts.set(
-        variant_id,
-        Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value)])) as PoolCounts
-      )
+    for (const row of rows) {
+      counts.get(row.key)![row.pool_status] = row.total
     }
 
     return counts
+  }
+
+  /**
+   * One page of a Voucher product variant's Vouchers, soonest to expire first and open-ended
+   * last, optionally only those with `status` (a `PoolStatus`) or in `batch_id`, with the
+   * total that match. Each has its status in the Pool, code hint, batch, first and last usable
+   * day in the store's time zone, and the order of its first-time Allocation. Never a code.
+   */
+  @InjectManager()
+  async listPoolVouchers(
+    input: { variant_id: string; status?: PoolStatus; batch_id?: string; skip: number; take: number },
+    now: Date = new Date(),
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<[PoolVoucher[], number]> {
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const [poolStatus, bindings] = this.poolStatusSql_(now, "v")
+    const matching = knex("voucher as v")
+      .where({ "v.variant_id": input.variant_id, "v.deleted_at": null })
+      .modify((query) => {
+        if (input.status) {
+          query.whereRaw(`${poolStatus} = ?`, [...bindings, input.status])
+        }
+        if (input.batch_id) {
+          query.where("v.batch_id", input.batch_id)
+        }
+      })
+
+    const [{ total }] = await matching.clone().count({ total: "*" })
+    const rows = await matching
+      .clone()
+      .leftJoin("voucher_batch as b", "b.id", "v.batch_id")
+      .leftJoin("voucher_allocation as a", (join) =>
+        join.on("a.voucher_id", "v.id").andOnNull("a.deleted_at").andOnNull("a.replaces_allocation_id")
+      )
+      .select(
+        "v.id",
+        "v.code_hint",
+        "v.valid_from",
+        "v.valid_until",
+        "b.id as batch_id",
+        "b.reference as batch_reference",
+        "a.order_id",
+        knex.raw(`${poolStatus} as pool_status`, bindings)
+      )
+      .orderByRaw("v.valid_until asc nulls last, v.created_at asc, v.id asc")
+      .offset(input.skip)
+      .limit(input.take)
+
+    const vouchers = rows.map((row) => ({
+      id: row.id,
+      status: row.pool_status,
+      code_hint: row.code_hint,
+      batch: { id: row.batch_id, reference: row.batch_reference },
+      first_day: row.valid_from ? dayOf(new Date(row.valid_from), this.timezone_) : null,
+      last_day: row.valid_until ? lastDayOf(new Date(row.valid_until), this.timezone_) : null,
+      order_id: row.order_id ?? null,
+    }))
+
+    return [vouchers, Number(total)]
   }
 
   /**

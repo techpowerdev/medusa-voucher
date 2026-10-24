@@ -34,7 +34,7 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
   }
 
   const variantId = voucherProduct.product_variant?.id
-  const counts = variantId ? (await service.countPoolByVariant([variantId])).get(variantId) : undefined
+  const counts = variantId ? (await service.countPool("variant", [variantId])).get(variantId) : undefined
 
   res.json({ voucher_product: { ...voucherProduct, counts: counts ?? emptyPoolCounts() } })
 }

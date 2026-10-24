@@ -24,7 +24,12 @@ export async function stockVouchers(
   container: MedusaContainer,
   product: { variantId: string; voucherProductId: string },
   vouchers: VoucherCodeInput[],
-  batchFields: { redemption_instructions?: string | null } = {}
+  batchFields: {
+    redemption_instructions?: string | null
+    purchased_at?: Date
+    reference?: string | null
+    unit_cost?: number | null
+  } = {}
 ) {
   const service: VoucherModuleService = container.resolve(VOUCHER_MODULE)
   const batch = await service.createVoucherBatches({

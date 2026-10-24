@@ -133,15 +133,34 @@ export type AllocateVouchersResult = {
   created: boolean
 }
 
-// A Voucher product's Pool by what can be done with it (see `countPoolByVariant`).
-export type PoolCounts = {
-  available: number
-  expired: number
-  under_minimum: number
-  allocated: number
-  delivered: number
-  void: number
+// Where a Voucher stands in its Pool when read: its status, with an `available` Voucher that
+// can no longer be sold told apart as `expired` or `under_minimum` (see `countPool`).
+export type PoolStatus = "available" | "expired" | "under_minimum" | "allocated" | "delivered" | "void"
+
+export const POOL_STATUSES: PoolStatus[] = [
+  "available",
+  "expired",
+  "under_minimum",
+  "allocated",
+  "delivered",
+  "void",
+]
+
+// A Voucher as the admin lists it: never its code, only the hint (see `codeHint`).
+export type PoolVoucher = {
+  id: string
+  status: PoolStatus
+  code_hint: string
+  batch: { id: string; reference: string | null }
+  // Whole days (`YYYY-MM-DD`) in the store's timezone; null when that end is open.
+  first_day: string | null
+  last_day: string | null
+  // The order of its first-time Allocation, if any.
+  order_id: string | null
 }
+
+// A Voucher product's Pool by what can be done with it (see `countPool`).
+export type PoolCounts = Record<PoolStatus, number>
 
 export const emptyPoolCounts = (): PoolCounts => ({
   available: 0,

@@ -20,7 +20,8 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
 
   // `available_vouchers` is the Available count (Vouchers that can still be sold); `counts`
   // has the rest of the Pool, read in one query for the page.
-  const counts = await service.countPoolByVariant(
+  const counts = await service.countPool(
+    "variant",
     data.map((voucherProduct) => voucherProduct.product_variant?.id).filter((id): id is string => !!id)
   )
   const voucherProducts = data.map((voucherProduct) => {

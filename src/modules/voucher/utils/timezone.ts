@@ -55,3 +55,8 @@ export function dayOf(instant: Date, timeZone: string): string {
     day: "2-digit",
   }).format(instant)
 }
+
+/** The last day a period ending at `validUntil` covers: `validUntil` is the first instant it no longer applies. */
+export function lastDayOf(validUntil: Date, timeZone: string): string {
+  return dayOf(new Date(validUntil.getTime() - 1), timeZone)
+}
