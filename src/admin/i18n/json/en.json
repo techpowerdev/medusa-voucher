@@ -34,5 +34,21 @@
     "open": "Open",
     "noBatches": "No Voucher batches yet.",
     "noVouchers": "No Vouchers match."
+  },
+  "import": {
+    "action": "Import CSV",
+    "title": "Import Vouchers",
+    "hint": "Creates a Voucher batch from a CSV file with a code column and optional pin, valid_from and valid_until columns. The file's codes are never shown.",
+    "redemptionInstructions": "Redemption instructions",
+    "redemptionHint": "Sent to customers with their codes. Starts as the latest batch's.",
+    "file": "CSV file",
+    "chooseFile": "Choose file",
+    "fileSummary": "{{name}} · {{rows}} rows",
+    "fileRequired": "Choose a CSV file",
+    "noRows": "The file has no rows to import.",
+    "tooManyRows": "The file has {{rows}} rows; at most {{max}} can be imported at once.",
+    "submit": "Import",
+    "success": "Imported {{imported}} Vouchers",
+    "failed": "Nothing was imported"
   }
 }

@@ -97,6 +97,21 @@ medusaIntegrationTestRunner({
           expect(vouchers.every((v) => v.variant_id === variantId)).toBe(true)
         })
 
+        it("imports a file of thousands of rows, larger than a default JSON body", async () => {
+          // About 200 KB: Express refuses a JSON body over 100 KB unless the route allows more.
+          const rows = Array.from(
+            { length: 5000 },
+            (_, index) => `CSV-LARGE-${String(index).padStart(6, "0")}-XXXXXXXX,,,31-12-2027`
+          )
+          const csv = ["code,pin,valid_from,valid_until", ...rows].join("\n")
+          expect(csv.length).toBeGreaterThan(100 * 1024)
+
+          const response = await importCsv(csv)
+
+          expect(response.status).toBe(201)
+          expect(response.data.imported).toBe(5000)
+        })
+
         it("rejects a CSV with a problem, listing its line, and creates no batch", async () => {
           const response = await importCsv(
             "code,valid_from\nCSV-CODE-0003,\nCSV-CODE-0004,not-a-date"

@@ -34,5 +34,21 @@
     "open": "ไม่กำหนด",
     "noBatches": "ยังไม่มี Voucher batch",
     "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข"
+  },
+  "import": {
+    "action": "นำเข้า CSV",
+    "title": "นำเข้า Voucher",
+    "hint": "สร้าง Voucher batch จากไฟล์ CSV ที่มีคอลัมน์ code และมี pin, valid_from, valid_until ได้ หน้านี้ไม่แสดงรหัสในไฟล์",
+    "redemptionInstructions": "วิธีใช้ Voucher",
+    "redemptionHint": "ส่งให้ลูกค้าพร้อมรหัส ตั้งต้นจาก batch ล่าสุด",
+    "file": "ไฟล์ CSV",
+    "chooseFile": "เลือกไฟล์",
+    "fileSummary": "{{name}} · {{rows}} แถว",
+    "fileRequired": "เลือกไฟล์ CSV",
+    "noRows": "ไฟล์ไม่มีแถวให้นำเข้า",
+    "tooManyRows": "ไฟล์มี {{rows}} แถว นำเข้าได้ครั้งละไม่เกิน {{max}} แถว",
+    "submit": "นำเข้า",
+    "success": "นำเข้า Voucher แล้ว {{imported}} ใบ",
+    "failed": "ไม่ได้นำเข้า Voucher"
   }
 }

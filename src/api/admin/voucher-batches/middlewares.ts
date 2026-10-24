@@ -20,6 +20,9 @@ export const voucherBatchMiddlewares: MiddlewareRoute[] = [
   {
     matcher: "/admin/voucher-batches/import",
     method: "POST",
+    // The CSV comes in the JSON body: up to MAX_CSV_VOUCHERS rows of about 200 bytes, far over
+    // the default 100 KB.
+    bodyParser: { sizeLimit: "10mb" },
     middlewares: [validateAndTransformBody(ImportVoucherBatchSchema)],
   },
 ]

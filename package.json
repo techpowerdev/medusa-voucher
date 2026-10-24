@@ -49,6 +49,7 @@
     "test:integration:http": "pnpm build && TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit"
   },
   "devDependencies": {
+    "@hookform/resolvers": "5.5.7",
     "@medusajs/admin-sdk": "2.21.2",
     "@medusajs/cli": "2.21.2",
     "@medusajs/dashboard": "2.21.2",
@@ -77,12 +78,14 @@
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hook-form": "7.83.0",
     "react-i18next": "13.5.0",
     "react-router-dom": "7.18.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.6.2",
     "vite": "^7.3.6",
-    "yalc": "^1.0.0-pre.53"
+    "yalc": "^1.0.0-pre.53",
+    "zod": "4.2.0"
   },
   "peerDependencies": {
     "@medusajs/admin-sdk": "2.21.2",

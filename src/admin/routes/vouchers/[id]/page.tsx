@@ -12,7 +12,7 @@ import {
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, UIMatch, useParams } from "react-router-dom"
+import { Link, Outlet, UIMatch, useParams } from "react-router-dom"
 import {
   listPoolVouchers,
   listVoucherBatches,
@@ -53,7 +53,7 @@ const filterValue = <T,>(param: string | undefined): T | undefined =>
   (param ? JSON.parse(param) : null) ?? undefined
 
 const PoolSection = ({ counts }: { counts: PoolCounts }) => {
-  const { t } = useTranslation(VOUCHER_NS)
+  const { t, i18n } = useTranslation(VOUCHER_NS)
 
   return (
     <Container className="divide-y p-0">
@@ -67,7 +67,7 @@ const PoolSection = ({ counts }: { counts: PoolCounts }) => {
               {t(`status.${status}`)}
             </StatusBadge>
             <Text size="xlarge" weight="plus">
-              {counts[status]}
+              {counts[status].toLocaleString(i18n.language)}
             </Text>
           </div>
         ))}
@@ -77,7 +77,7 @@ const PoolSection = ({ counts }: { counts: PoolCounts }) => {
 }
 
 const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
-  const { t } = useTranslation(VOUCHER_NS)
+  const { t, i18n } = useTranslation(VOUCHER_NS)
   const { getFullDate } = useDate()
   const { offset } = useQueryParams(["offset"], BATCHES_PREFIX)
 
@@ -113,11 +113,11 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
         batchColumns.display({
           id: status,
           header: t(`status.${status}`),
-          cell: ({ row }) => row.original.counts[status],
+          cell: ({ row }) => row.original.counts[status].toLocaleString(i18n.language),
         })
       ),
     ],
-    [t, getFullDate, voucherProduct.currency_code]
+    [t, i18n.language, getFullDate, voucherProduct.currency_code]
   )
 
   if (isError) {
@@ -137,6 +137,7 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
         isLoading={isPending}
         heading={t("detail.batches")}
         headingLevel="h2"
+        action={{ label: t("import.action"), to: "import" }}
         emptyState={{ empty: { heading: t("detail.noBatches") } }}
       />
     </Container>
@@ -297,6 +298,8 @@ const VoucherProductPage = () => {
       <PoolSection counts={voucherProduct.counts} />
       <BatchesSection voucherProduct={voucherProduct} />
       <VouchersSection voucherProduct={voucherProduct} />
+      {/* The import dialog opens over the page. */}
+      <Outlet />
     </div>
   )
 }

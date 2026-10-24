@@ -14,7 +14,7 @@ const PAGE_SIZE = 20
 const columnHelper = createDataTableColumnHelper<VoucherProduct>()
 
 const VouchersPage = () => {
-  const { t } = useTranslation(VOUCHER_NS)
+  const { t, i18n } = useTranslation(VOUCHER_NS)
   const { offset } = useQueryParams(["offset"])
 
   const { data, isPending, isError, error } = useQuery({
@@ -28,7 +28,7 @@ const VouchersPage = () => {
       columnHelper.display({
         id: status,
         header: t(`status.${status}`),
-        cell: ({ row }) => row.original.counts[status],
+        cell: ({ row }) => row.original.counts[status].toLocaleString(i18n.language),
       })
 
     return [
@@ -44,7 +44,7 @@ const VouchersPage = () => {
       count("allocated"),
       count("delivered"),
     ]
-  }, [t])
+  }, [t, i18n.language])
 
   if (isError) {
     throw error
