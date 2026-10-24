@@ -18,11 +18,19 @@ const DAY = 24 * 60 * MINUTE
 
 jest.setTimeout(60 * 1000)
 
+// These tests are about Deliveries; fulfillment after them has its own spec. Read by the test
+// application's configuration in the runner's beforeAll.
+process.env.VOUCHER_TEST_DELIVERY_FULFILL = "false"
+
 medusaIntegrationTestRunner({
   medusaConfigFile: path.join(__dirname, ".."),
   testSuite: ({ getContainer }) => {
     describe("Retry and recovery of Deliveries", () => {
       const service = (): VoucherModuleService => getContainer().resolve(VOUCHER_MODULE)
+
+      afterAll(() => {
+        delete process.env.VOUCHER_TEST_DELIVERY_FULFILL
+      })
 
       afterEach(() => jest.restoreAllMocks())
 

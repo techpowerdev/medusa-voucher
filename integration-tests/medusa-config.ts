@@ -44,6 +44,15 @@ module.exports = defineConfig({
         // runner loads this file, so allocations in it do not send on their own.
         delivery: {
           automatic: process.env.VOUCHER_TEST_DELIVERY_AUTOMATIC !== "false",
+          // Same for fulfillment, in a spec that checks it can be turned off.
+          fulfill: process.env.VOUCHER_TEST_DELIVERY_FULFILL !== "false",
+          // A getter, so each test can supply the shipping option it created; the plugin
+          // reads it on every fulfillment.
+          fulfillment: {
+            get shippingOptionId() {
+              return process.env.VOUCHER_TEST_SHIPPING_OPTION_ID
+            },
+          },
           renderers: { email: (input: VoucherEmailInput) => testEmailRenderer.render(input) },
         },
       },

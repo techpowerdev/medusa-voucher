@@ -103,6 +103,8 @@ class VoucherModuleService extends MedusaService({
   protected minimumRemainingValidityDays_: number
   protected emailRenderer_: VoucherEmailRenderer | null
   protected automaticDelivery_: boolean
+  protected fulfill_: boolean
+  protected fulfillmentOptions_: NonNullable<VoucherModuleOptions["delivery"]>["fulfillment"]
 
   constructor(container: Record<string, unknown>, options: VoucherModuleOptions) {
     // @ts-ignore
@@ -113,15 +115,21 @@ class VoucherModuleService extends MedusaService({
     this.minimumRemainingValidityDays_ = options?.minimumRemainingValidityDays ?? 0
     this.emailRenderer_ = options?.delivery?.renderers?.email ?? null
     this.automaticDelivery_ = options?.delivery?.automatic ?? true
+    this.fulfill_ = options?.delivery?.fulfill ?? true
+    // Kept as given, so a getter for the shipping option id is read on every fulfillment.
+    this.fulfillmentOptions_ = options?.delivery?.fulfillment
   }
 
   /**
-   * The delivery options: whether allocation starts delivery on its own, and what a
-   * Delivery is rendered with (`email` is null when the store has no renderer).
+   * The delivery options: whether allocation starts delivery on its own, what a Delivery is
+   * rendered with (`email` is null when the store has no renderer), and whether and with
+   * which shipping option (null when not configured) the Voucher lines are fulfilled after it.
    */
   async getDeliverySettings() {
     return {
       automatic: this.automaticDelivery_,
+      fulfill: this.fulfill_,
+      shippingOptionId: this.fulfillmentOptions_?.shippingOptionId ?? null,
       timezone: this.timezone_,
       renderers: { email: this.emailRenderer_ },
     }
