@@ -4,10 +4,10 @@
 
 **Blocked by:** 02 (List a Voucher product's batches and Vouchers). Done before 03.
 
-**Status:** ready-for-agent
+**Status:** done (PR #26)
 
-- [ ] An `available` Voucher whose Validity period ended before `now` becomes `expired`; one ending after `now`, or open-ended, is left alone
-- [ ] Allocated, Delivered and Void Vouchers are never changed
-- [ ] Running it again changes nothing
-- [ ] The workflow takes `now`; the job only calls it
-- [ ] Tested at the workflow against a real database
+- [x] An `available` Voucher whose Validity period ended before `now` becomes `expired`; one ending after `now`, or open-ended, is left alone
+- [x] Allocated, Delivered and Void Vouchers are never changed
+- [x] Running it again changes nothing
+- [x] The workflow takes `now`; the job only calls it
+- [x] Tested at the workflow against a real database

@@ -21,6 +21,9 @@ importers:
       '@medusajs/cli':
         specifier: 2.21.2
         version: 2.21.2(@types/node@20.19.43)
+      '@medusajs/dashboard':
+        specifier: 2.21.2
+        version: 2.21.2(@sinclair/typebox@0.34.52)(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(ajv@8.13.0)(typescript@5.9.3)
       '@medusajs/eslint-plugin':
         specifier: 2.21.2
         version: 2.21.2(eslint@9.39.5(jiti@2.7.0))(typescript@5.9.3)
@@ -30,6 +33,9 @@ importers:
       '@medusajs/icons':
         specifier: 2.21.2
         version: 2.21.2(react@18.3.1)
+      '@medusajs/js-sdk':
+        specifier: 2.21.2
+        version: 2.21.2
       '@medusajs/medusa':
         specifier: 2.21.2
         version: 2.21.2(3b22c59c632ab99db92f3fe2a68e248d)
@@ -45,6 +51,9 @@ importers:
       '@swc/jest':
         specifier: ^0.2.39
         version: 0.2.39(@swc/core@1.16.18(@swc/helpers@0.5.23))
+      '@tanstack/react-query':
+        specifier: 5.64.2
+        version: 5.64.2(react@18.3.1)
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
@@ -66,6 +75,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.5(jiti@2.7.0)
+      i18next:
+        specifier: 23.7.11
+        version: 23.7.11
       jest:
         specifier: ^30.5.2
         version: 30.5.2(@types/node@20.19.43)(ts-node@10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@20.19.43)(typescript@5.9.3))
@@ -87,6 +99,12 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      react-i18next:
+        specifier: 13.5.0
+        version: 13.5.0(i18next@23.7.11)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-router-dom:
+        specifier: 7.18.2
+        version: 7.18.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.16.18(@swc/helpers@0.5.23))(@types/node@20.19.43)(typescript@5.9.3)

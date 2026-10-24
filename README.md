@@ -2,11 +2,11 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist; the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist, with admin pages to review the Pool; importing and marking from the admin do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
-- Admin pages to import voucher codes from a CSV file and to review the Pool of each Voucher product (the import API already exists, see below).
+- Admin pages to import voucher codes from a CSV file and to mark a variant as a Voucher product (the APIs already exist, see below).
 - Low stock and expiring-soon alerts.
 - Replacing a Delivered Voucher that did not work.
 - Store API for signed-in customers to view the codes they bought, with the QR code.
@@ -58,7 +58,7 @@ npx medusa db:migrate
 A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR-0003](./docs/adr/0003-mark-voucher-products-with-a-linked-model.md)). Sell one Medusa product per partner (for example a supermarket) with a variant per face value, then mark each variant (admin authentication):
 
 - `POST /admin/voucher-products` with `variant_id`, `face_value` and `currency_code` marks a variant. An unknown variant is refused (404) and so is one that is already marked (422).
-- `GET /admin/voucher-products` lists them with the variant, `available_vouchers` and `counts`.
+- `GET /admin/voucher-products` lists them by Partner (the Medusa product's title), then variant, with the variant and its product (`id`, `title`), `available_vouchers` and `counts` (`limit` and `offset`, 50 by default).
 - `GET /admin/voucher-products/:id` returns one with its variant, the Medusa product and `counts`; an unknown id is refused (404).
 - `GET /admin/voucher-products/:id/batches` lists its Voucher batches, newest purchase first, each with `purchased_at`, `unit_cost`, `reference`, `redemption_instructions` and its own `counts` (`limit` and `offset`, 20 by default).
 - `GET /admin/voucher-products/:id/vouchers` lists its Vouchers, soonest to expire first and open-ended last, each with `status` (one of the `counts` names), `code_hint` (the code's last characters, never the code), `batch`, `first_day` and `last_day` (whole days in the plugin's `timezone`, null when open) and the `order` (`id`, `display_id`) it was allocated to. Filter with `status` and `batch_id`; `limit` and `offset`, 20 by default.
@@ -67,6 +67,8 @@ A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR
 `counts` is the Pool by what can be done with it: `available` (Vouchers that can still be sold: within their validity and with at least `minimumRemainingValidityDays` left, the same rule allocation uses), `expired` (past their validity), `under_minimum` (still valid but with too little left to be sold), `allocated`, `delivered` and `void`. `available_vouchers` equals `counts.available`; before this it also counted expired and under-minimum Vouchers. The counts are worked out when read, so they are right at any moment; under-minimum is never stored, since it depends on an option you can change.
 
 A scheduled job, `mark-expired-vouchers`, runs every 15 minutes and records as `expired` the Available Vouchers whose validity has ended, logging how many as info. Allocated, Delivered and Void Vouchers keep their status. It needs a server whose `workerMode` is `worker` or `shared`, like the other jobs; the workflow behind it, `markExpiredVouchersWorkflow`, is exported too.
+
+In the admin, **Vouchers** in the sidebar lists the Voucher products with their counts, and each one has a page with its counts, Voucher batches and Vouchers, filtered by status or batch, with only the masked `code_hint` of each code. The pages are in English and Thai.
 
 The link between a Voucher product and its variant is a Medusa module link, so run `npx medusa db:migrate` in the host application to create its table.
 

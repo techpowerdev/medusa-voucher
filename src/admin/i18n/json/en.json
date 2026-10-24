@@ -1,0 +1,38 @@
+{
+  "menu": {
+    "vouchers": "Vouchers"
+  },
+  "status": {
+    "available": "Available",
+    "expired": "Expired",
+    "under_minimum": "Under minimum validity",
+    "allocated": "Allocated",
+    "delivered": "Delivered",
+    "void": "Void"
+  },
+  "list": {
+    "title": "Vouchers",
+    "description": "Voucher products and their Pools. Available counts only Vouchers that can still be sold.",
+    "partner": "Partner",
+    "variant": "Variant",
+    "faceValue": "Face value",
+    "empty": "No Voucher products yet. Mark a variant as a Voucher product on its page."
+  },
+  "detail": {
+    "pool": "Pool",
+    "batches": "Voucher batches",
+    "vouchers": "Vouchers",
+    "purchasedAt": "Purchased",
+    "unitCost": "Unit cost",
+    "reference": "Reference",
+    "code": "Code",
+    "status": "Status",
+    "batch": "Batch",
+    "firstDay": "First day",
+    "lastDay": "Last day",
+    "order": "Order",
+    "open": "Open",
+    "noBatches": "No Voucher batches yet.",
+    "noVouchers": "No Vouchers match."
+  }
+}
