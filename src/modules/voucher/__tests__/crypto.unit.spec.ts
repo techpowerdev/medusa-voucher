@@ -128,6 +128,30 @@ describe("voucher options loader", () => {
     await expect(run({ encryptionKey: KEY, delivery: { automatic: true } })).resolves.toBeUndefined()
   })
 
+  it("fails on a delivery.fulfill that is not a boolean", async () => {
+    for (const bad of ["true", 1, null]) {
+      await expect(run({ encryptionKey: KEY, delivery: { fulfill: bad } })).rejects.toThrow(
+        /delivery\.fulfill/
+      )
+    }
+    await expect(run({ encryptionKey: KEY, delivery: { fulfill: false } })).resolves.toBeUndefined()
+  })
+
+  it("fails on a delivery.fulfillment.shippingOptionId that is not a non-empty string", async () => {
+    for (const bad of ["", "   ", 7, null]) {
+      await expect(
+        run({ encryptionKey: KEY, delivery: { fulfillment: { shippingOptionId: bad } } })
+      ).rejects.toThrow(/delivery\.fulfillment\.shippingOptionId/)
+    }
+    await expect(
+      run({ encryptionKey: KEY, delivery: { fulfillment: { shippingOptionId: "so_123" } } })
+    ).resolves.toBeUndefined()
+    // A getter that has no value yet, as when the id comes from the environment.
+    await expect(
+      run({ encryptionKey: KEY, delivery: { fulfillment: { shippingOptionId: undefined } } })
+    ).resolves.toBeUndefined()
+  })
+
   it("passes with a valid key", async () => {
     await expect(run({ encryptionKey: KEY })).resolves.toBeUndefined()
   })

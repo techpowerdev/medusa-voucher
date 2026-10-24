@@ -25,6 +25,20 @@ export type VoucherModuleOptions = {
      */
     automatic?: boolean
     /**
+     * Records Medusa's fulfillment of an order's Voucher lines, marked delivered, once its
+     * Delivery succeeds (ADR-0005). Defaults to true; set false when the store fulfills
+     * orders its own way.
+     */
+    fulfill?: boolean
+    fulfillment?: {
+      /**
+       * The shipping option the fulfillment is recorded with; its stock location is used.
+       * Without it, the order's own shipping method. Read on each fulfillment, so a getter
+       * works.
+       */
+      shippingOptionId?: string
+    }
+    /**
      * Replaces the plugin's default email (English) with the store's own, per channel. It
      * receives the order and its Vouchers with their codes and returns the subject, HTML
      * and plain text. Refer to each Voucher's QR code in the HTML as `cid:<qr_code_cid>`,

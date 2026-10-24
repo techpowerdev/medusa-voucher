@@ -37,7 +37,14 @@ export async function stockVouchers(
   return service.createVouchersFromCodes({ batch_id: batch.id, vouchers })
 }
 
-export type OrderLine = { variant_id: string; quantity: number; unit_price?: number }
+// `requires_shipping` is false for a Voucher product without a shipping profile, as the
+// README recommends.
+export type OrderLine = {
+  variant_id: string
+  quantity: number
+  unit_price?: number
+  requires_shipping?: boolean
+}
 
 // An order with one line item per entry, through the Order module. `email: null` creates an
 // order without an email address.
@@ -54,6 +61,7 @@ export async function createOrder(
       variant_id: line.variant_id,
       quantity: line.quantity,
       unit_price: line.unit_price ?? 100,
+      requires_shipping: line.requires_shipping,
     })),
   })
 

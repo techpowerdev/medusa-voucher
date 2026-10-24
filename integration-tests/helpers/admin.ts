@@ -28,12 +28,14 @@ export async function createAdminHeaders(container: MedusaContainer) {
 }
 
 // Creates a product with one variant through the Product module and returns the variant id.
+// Inventory is not managed, as the README recommends for Voucher products; an order created
+// through the Order module has no stock reservation to fulfill against.
 export async function createVariant(container: MedusaContainer, title = "100") {
   const [product] = await container.resolve(Modules.PRODUCT).createProducts([
     {
       title: `Example voucher ${title}`,
       options: [{ title: "Face value", values: [title] }],
-      variants: [{ title, options: { "Face value": title } }],
+      variants: [{ title, options: { "Face value": title }, manage_inventory: false }],
     },
   ])
 

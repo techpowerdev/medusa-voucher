@@ -28,8 +28,8 @@ function lastDay(validUntil: Date, timeZone: string): string {
 }
 
 // The Delivery this run claimed and tried, or null when the order has no Vouchers, another
-// run holds it, or it was delivered already.
-export type SendOrderVouchersResult = { delivery_id: string | null }
+// run holds it, or it was delivered already; `delivered` when this run's send succeeded.
+export type SendOrderVouchersResult = { delivery_id: string | null; delivered: boolean }
 
 /**
  * Sends an order's first-time Allocations to its email in one message. Codes go only into
@@ -62,7 +62,7 @@ export const sendOrderVouchersStep = createStep(
 
     // An order without Vouchers has nothing to send and gets no Delivery.
     if (!allocations.length) {
-      return new StepResponse({ delivery_id: null })
+      return new StepResponse({ delivery_id: null, delivered: false })
     }
 
     // Only the caller that claims the Delivery sends, so concurrent runs send once.
@@ -73,13 +73,13 @@ export const sendOrderVouchersStep = createStep(
     })
 
     if (!delivery) {
-      return new StepResponse({ delivery_id: null })
+      return new StepResponse({ delivery_id: null, delivered: false })
     }
 
     if (!order.email) {
       await service.failDelivery({ id: delivery.id, error: "The order has no email address" })
 
-      return new StepResponse({ delivery_id: delivery.id })
+      return new StepResponse({ delivery_id: delivery.id, delivered: false })
     }
 
     // The Partner is the Medusa product's title; the Face value is on the Voucher product.
@@ -155,7 +155,7 @@ export const sendOrderVouchersStep = createStep(
         )
       await service.failDelivery({ id: delivery.id, error: safeError(error, secrets) })
 
-      return new StepResponse({ delivery_id: delivery.id })
+      return new StepResponse({ delivery_id: delivery.id, delivered: false })
     }
 
     await service.completeDelivery({
@@ -163,6 +163,6 @@ export const sendOrderVouchersStep = createStep(
       voucher_ids: allocations.map(({ voucher }) => voucher.id),
     })
 
-    return new StepResponse({ delivery_id: delivery.id })
+    return new StepResponse({ delivery_id: delivery.id, delivered: true })
   }
 )

@@ -6,6 +6,7 @@ import { DeliveryChannel, DeliveryStatus } from "../../modules/voucher/constants
 import VoucherModuleService from "../../modules/voucher/service"
 import { deliverOrderVouchersWorkflow } from "../deliver-order-vouchers"
 import { errorMessage } from "../utils/error-message"
+import { applyVoucherFulfillment, readVoucherFulfillment } from "../utils/fulfill-order-voucher-lines"
 
 const MINUTE = 60 * 1000
 
@@ -26,6 +27,8 @@ export type DeliveryRetryOutcome = {
   retried: string[]
   // Orders that had Allocations but no email Delivery, and were tried.
   recovered: string[]
+  // Orders whose Voucher lines were fulfilled after their Delivery.
+  fulfilled: string[]
   // Orders whose try threw; they are tried again on the next run.
   failed: string[]
   pages: number
@@ -80,8 +83,9 @@ async function deliverOrder(container: MedusaContainer, orderId: string, outcome
 }
 
 // Tries again the email Deliveries that failed fewer than 5 times or were interrupted while
-// sending, and sends the orders allocated inside the window ending at `now` that have no
-// email Delivery. Each order runs on its own, so one that throws cannot stop the others.
+// sending, sends the orders allocated inside the window ending at `now` that have no email
+// Delivery, and records the fulfillment of orders delivered inside it whose Voucher lines are
+// not yet fulfilled. Each order runs on its own, so one that throws cannot stop the others.
 // Logs carry ids, never codes.
 export const retryVoucherDeliveriesStep = createStep(
   "retry-voucher-deliveries",
@@ -89,7 +93,7 @@ export const retryVoucherDeliveriesStep = createStep(
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
     const service: VoucherModuleService = container.resolve(VOUCHER_MODULE)
     const now = new Date(input.now).getTime()
-    const outcome: DeliveryRetryOutcome = { retried: [], recovered: [], failed: [], pages: 0 }
+    const outcome: DeliveryRetryOutcome = { retried: [], recovered: [], fulfilled: [], failed: [], pages: 0 }
 
     // With automatic delivery off the store sends by calling the delivery workflow itself.
     if (!(await service.getDeliverySettings()).automatic) {
@@ -166,6 +170,45 @@ export const retryVoucherDeliveriesStep = createStep(
         }
       }
     )
+
+    // Delivered orders whose fulfillment failed or was cut short. A canceled order is left
+    // alone without a word: its failure was logged when it happened.
+    if ((await service.getDeliverySettings()).fulfill) {
+      outcome.pages += await eachPage(
+        input.page_size,
+        (afterId) =>
+          service.listVoucherDeliveries(
+            {
+              channel: DeliveryChannel.EMAIL,
+              status: DeliveryStatus.DELIVERED,
+              delivered_at: { $gte: new Date(now - DELIVERY_RETRY_LOOKBACK_MS), $lte: new Date(now) },
+              ...(afterId ? { id: { $gt: afterId } } : {}),
+            },
+            { select: ["id", "order_id"], take: input.page_size, order: { id: "ASC" } }
+          ),
+        async (deliveries) => {
+          const states = await readVoucherFulfillment(
+            container,
+            deliveries.map((delivery) => delivery.order_id)
+          )
+
+          for (const state of states.values()) {
+            try {
+              if (await applyVoucherFulfillment(container, state)) {
+                outcome.fulfilled.push(state.order_id)
+                logger.info(`@khumkha/medusa-voucher: fulfilled the Voucher lines of order ${state.order_id}`)
+              }
+            } catch (error) {
+              outcome.failed.push(state.order_id)
+              logger.error(
+                `@khumkha/medusa-voucher: could not fulfill the Voucher lines of order ${state.order_id}, will try again: ` +
+                  errorMessage(error)
+              )
+            }
+          }
+        }
+      )
+    }
 
     return new StepResponse(outcome)
   }

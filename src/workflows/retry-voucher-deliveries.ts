@@ -11,8 +11,10 @@ export const retryVoucherDeliveriesWorkflowId = "retry-voucher-deliveries"
  * time) that failed fewer than 5 times or have been sending for more than 10 minutes, and
  * sends the orders allocated between 7 days and 10 minutes before `now` that have no email
  * Delivery, reading `page_size` rows at a time (default 500). Only Paid orders are sent.
- * Does nothing when `delivery.automatic` is false. Returns the orders retried, the ones
- * recovered, the ones whose try threw, and the number of pages read.
+ * Then records the fulfillment of orders delivered within 7 days whose Voucher lines are not
+ * yet fulfilled, unless `delivery.fulfill` is false. Does nothing when `delivery.automatic`
+ * is false. Returns the orders retried, recovered and fulfilled, the ones whose try threw,
+ * and the number of pages read.
  */
 export const retryVoucherDeliveriesWorkflow = createWorkflow(
   retryVoucherDeliveriesWorkflowId,

@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, exist; recording Medusa's fulfillment of delivered orders and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist; the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
@@ -105,6 +105,28 @@ A scheduled job, `retry-voucher-deliveries`, runs every 15 minutes. It tries aga
 - It sends only for a Paid order that is not canceled, the same rule allocation uses; an order without Vouchers is left alone. Concurrent runs for one order send one message.
 - When the provider accepts the message, the Delivery becomes `delivered` and the Vouchers `delivered`. When the order has no email, or the provider throws, the Delivery becomes `failed` and the Vouchers stay allocated to the order. The error stored on the Delivery is Medusa's own message; the provider's full message goes to the error log with the order's codes and PINs removed.
 - Codes go only into the email's content and attachments, never into the notification's `data`, which Medusa stores as plain JSON in its `notification` table.
+
+### Fulfillment of delivered Voucher lines
+
+Once an order's email Delivery becomes `delivered`, whatever started it, the plugin records Medusa's fulfillment of the order's Voucher lines for the quantities it delivered and marks it delivered at once ([ADR-0005](./docs/adr/0005-fulfill-voucher-lines-as-delivered-after-a-delivery.md)), so the admin shows the order as delivered instead of awaiting fulfillment. Other lines are left to you; an order mixing them shows as partially delivered. A failed Delivery records no fulfillment. Both steps carry `no_notification`, so your own subscribers on fulfillment or delivery events need not email the customer a second time.
+
+Medusa needs a shipping option and a stock location to record any fulfillment, even of items that do not ship. Create a shipping option for Vouchers (for example "Email delivery", priced 0, on a stock location) and give its id:
+
+```ts
+options: {
+  encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
+  delivery: {
+    fulfillment: { shippingOptionId: process.env.VOUCHER_SHIPPING_OPTION_ID }, // read on every fulfillment
+    fulfill: true, // optional; true by default, false if you fulfill orders your own way
+  },
+},
+```
+
+Without it, the order's own shipping method is used; with neither, the fulfillment fails. At startup the id can only be checked to be a non-empty string, so a wrong id shows up as a failed fulfillment. A fulfillment that fails is logged as an error with the order id and the reason; the Delivery stays `delivered` and the email is never sent again for it. The `retry-voucher-deliveries` job records it later for orders delivered in the last 7 days, and skips an order canceled meanwhile without logging it again.
+
+Recommended Voucher product setup: no shipping profile and inventory management off. A cart of such products completes without a shipping method, and the fulfillment needs no stock reservation. A Voucher product that does require shipping still works, using the order's shipping method or your option when their shipping profiles match.
+
+Medusa refuses to cancel an order with a fulfillment that is not canceled, and refuses to cancel a delivered fulfillment, so once an order's Vouchers are delivered the order can no longer be canceled. Refund it instead (Medusa refunds a payment without a return); the customer already holds the codes.
 
 ### Email provider
 
