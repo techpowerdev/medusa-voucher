@@ -708,6 +708,36 @@ class VoucherModuleService extends MedusaService({
   }
 
   /**
+   * Marks the Available Vouchers whose Validity period has ended by `now` as Expired. Allocated,
+   * Delivered and Void Vouchers keep their status. Returns how many were marked.
+   */
+  @InjectManager()
+  async markExpiredVouchers(
+    input: { now: Date },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<number> {
+    return await this.markExpiredVouchers_(input, sharedContext)
+  }
+
+  // One conditional UPDATE, so a Voucher allocated meanwhile keeps its status. Allocation only
+  // takes Vouchers still valid after now, so the two never want the same row.
+  @InjectTransactionManager()
+  protected async markExpiredVouchers_(
+    input: { now: Date },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<number> {
+    const knex = transactionKnex(sharedContext, "markExpiredVouchers_")
+
+    const rows: { id: string }[] = await knex("voucher")
+      .where({ status: VoucherStatus.AVAILABLE, deleted_at: null })
+      .where("valid_until", "<=", input.now)
+      .update({ status: VoucherStatus.EXPIRED, updated_at: new Date() })
+      .returning("id")
+
+    return rows.length
+  }
+
+  /**
    * Marks the Deliveries that have been sending since before `before` as failed, as a process
    * that died mid-send left them, so they are tried again like any failed Delivery. Returns
    * their ids.
