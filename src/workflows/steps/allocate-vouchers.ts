@@ -13,7 +13,7 @@ export const allocateVouchersStep = createStep(
     return new StepResponse(
       input.lines.length
         ? await service.allocateVouchers(input)
-        : { allocated: [], failures: [] }
+        : { allocated: [], failures: [], created: false }
     )
   }
 )

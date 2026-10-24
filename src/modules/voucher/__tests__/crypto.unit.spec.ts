@@ -118,6 +118,16 @@ describe("voucher options loader", () => {
     await expect(run({ encryptionKey: KEY, minimumRemainingValidityDays: 30 })).resolves.toBeUndefined()
   })
 
+  it("fails on a delivery.automatic that is not a boolean", async () => {
+    for (const bad of ["false", 0, null]) {
+      await expect(run({ encryptionKey: KEY, delivery: { automatic: bad } })).rejects.toThrow(
+        /delivery\.automatic/
+      )
+    }
+    await expect(run({ encryptionKey: KEY, delivery: { automatic: false } })).resolves.toBeUndefined()
+    await expect(run({ encryptionKey: KEY, delivery: { automatic: true } })).resolves.toBeUndefined()
+  })
+
   it("passes with a valid key", async () => {
     await expect(run({ encryptionKey: KEY })).resolves.toBeUndefined()
   })

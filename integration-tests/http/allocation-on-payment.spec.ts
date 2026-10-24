@@ -92,7 +92,7 @@ medusaIntegrationTestRunner({
 
         const { result } = await run(order.id)
 
-        expect(result).toEqual({ allocated: [], failures: [] })
+        expect(result).toEqual({ allocated: [], failures: [], created: false })
         expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
       })
 

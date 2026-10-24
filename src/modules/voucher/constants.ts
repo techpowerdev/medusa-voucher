@@ -26,3 +26,9 @@ export enum AllocationFailureStatus {
 
 // `resolved_by` of an Allocation failure closed because its order was allocated.
 export const ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM = "system"
+
+// Events the plugin emits; subscribers in the host application may listen to them too.
+export enum VoucherEvents {
+  // An allocation created new Allocations for an order. Data: `{ order_id }`.
+  ALLOCATED = "voucher.allocated",
+}
