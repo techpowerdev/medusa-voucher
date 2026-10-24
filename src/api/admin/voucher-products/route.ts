@@ -4,8 +4,8 @@ import {
 } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { VOUCHER_MODULE } from "../../../modules/voucher"
-import { VoucherStatus } from "../../../modules/voucher/constants"
 import VoucherModuleService from "../../../modules/voucher/service"
+import { emptyPoolCounts } from "../../../modules/voucher/types"
 import { createVoucherProductWorkflow } from "../../../workflows/create-voucher-product"
 import { CreateVoucherProductBody } from "./middlewares"
 
@@ -18,20 +18,16 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     pagination: req.queryConfig.pagination,
   })
 
-  // The count shown is the Pool of Available Vouchers of the linked variant.
-  const voucherProducts = await Promise.all(
-    data.map(async (voucherProduct) => {
-      const [, available] = await service.listAndCountVouchers(
-        {
-          variant_id: voucherProduct.product_variant?.id,
-          status: VoucherStatus.AVAILABLE,
-        },
-        { select: ["id"], take: 1 }
-      )
-
-      return { ...voucherProduct, available_vouchers: available }
-    })
+  // `available_vouchers` is the Available count (Vouchers that can still be sold); `counts`
+  // has the rest of the Pool, read in one query for the page.
+  const counts = await service.countPoolByVariant(
+    data.map((voucherProduct) => voucherProduct.product_variant?.id).filter((id): id is string => !!id)
   )
+  const voucherProducts = data.map((voucherProduct) => {
+    const pool = counts.get(voucherProduct.product_variant?.id ?? "") ?? emptyPoolCounts()
+
+    return { ...voucherProduct, available_vouchers: pool.available, counts: pool }
+  })
 
   res.json({
     voucher_products: voucherProducts,

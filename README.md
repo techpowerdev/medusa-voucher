@@ -58,7 +58,10 @@ npx medusa db:migrate
 A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR-0003](./docs/adr/0003-mark-voucher-products-with-a-linked-model.md)). Sell one Medusa product per partner (for example a supermarket) with a variant per face value, then mark each variant (admin authentication):
 
 - `POST /admin/voucher-products` with `variant_id`, `face_value` and `currency_code` marks a variant. An unknown variant is refused (404) and so is one that is already marked (422).
-- `GET /admin/voucher-products` lists them with the variant and `available_vouchers`.
+- `GET /admin/voucher-products` lists them with the variant, `available_vouchers` and `counts`.
+- `GET /admin/voucher-products/:id` returns one with its variant, the Medusa product and `counts`; an unknown id is refused (404).
+
+`counts` is the Pool by what can be done with it: `available` (Vouchers that can still be sold: within their validity and with at least `minimumRemainingValidityDays` left, the same rule allocation uses), `expired` (past their validity), `under_minimum` (still valid but with too little left to be sold), `allocated`, `delivered` and `void`. `available_vouchers` equals `counts.available`; before this it also counted expired and under-minimum Vouchers. The counts are worked out when read; no Voucher's status is changed.
 - `POST /admin/voucher-products/:id` changes `face_value` or `currency_code`, only while the Voucher product has no Vouchers.
 
 The link between a Voucher product and its variant is a Medusa module link, so run `npx medusa db:migrate` in the host application to create its table.
