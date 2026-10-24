@@ -12,11 +12,34 @@ import { CreateVoucherProductBody } from "./middlewares"
 export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const service: VoucherModuleService = req.scope.resolve(VOUCHER_MODULE)
-  const { data, metadata } = await query.graph({
+  // Ordered by Partner (the Medusa product's title), then variant. Query cannot order by a
+  // linked module's field, so every Voucher product is read and the page is cut here; a store
+  // has tens of them, not thousands.
+  const { data: all } = await query.graph({
     entity: "voucher_product",
-    fields: ["id", "face_value", "currency_code", "product_variant.id"],
-    pagination: req.queryConfig.pagination,
+    fields: [
+      "id",
+      "face_value",
+      "currency_code",
+      "product_variant.id",
+      "product_variant.title",
+      "product_variant.product.id",
+      "product_variant.product.title",
+    ],
   })
+  const byName = (voucherProduct: (typeof all)[number]) => [
+    voucherProduct.product_variant?.product?.title ?? "",
+    voucherProduct.product_variant?.title ?? "",
+  ]
+  const { skip = 0, take } = req.queryConfig.pagination
+  const data = [...all]
+    .sort((a, b) => {
+      const [aProduct, aVariant] = byName(a)
+      const [bProduct, bVariant] = byName(b)
+
+      return aProduct.localeCompare(bProduct) || aVariant.localeCompare(bVariant) || a.id.localeCompare(b.id)
+    })
+    .slice(skip, take === undefined ? undefined : skip + take)
 
   // `available_vouchers` is the Available count (Vouchers that can still be sold); `counts`
   // has the rest of the Pool, read in one query for the page.
@@ -32,9 +55,9 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
 
   res.json({
     voucher_products: voucherProducts,
-    count: metadata?.count ?? voucherProducts.length,
-    limit: req.queryConfig.pagination.take,
-    offset: req.queryConfig.pagination.skip,
+    count: all.length,
+    limit: take,
+    offset: skip,
   })
 }
 

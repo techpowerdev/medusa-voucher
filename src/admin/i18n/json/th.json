@@ -1,0 +1,42 @@
+{
+  "menu": {
+    "vouchers": "Voucher"
+  },
+  "status": {
+    "available": "พร้อมขาย",
+    "expired": "หมดอายุ",
+    "under_minimum": "อายุเหลือน้อยกว่าเกณฑ์",
+    "allocated": "จัดให้คำสั่งซื้อแล้ว",
+    "delivered": "ส่งแล้ว",
+    "void": "ยกเลิก"
+  },
+  "list": {
+    "title": "Voucher",
+    "description": "Voucher product และ Pool ของแต่ละรายการ พร้อมขายนับเฉพาะ Voucher ที่ยังขายได้",
+    "partner": "Partner",
+    "variant": "ตัวเลือก",
+    "faceValue": "มูลค่าหน้าบัตร",
+    "empty": "ยังไม่มี Voucher product กำหนดตัวเลือกสินค้าเป็น Voucher product ได้ที่หน้าของตัวเลือกนั้น"
+  },
+  "detail": {
+    "pool": "Pool",
+    "batches": "Voucher batch",
+    "vouchers": "Voucher",
+    "purchasedAt": "วันที่ซื้อ",
+    "unitCost": "ราคาทุนต่อใบ",
+    "reference": "เลขอ้างอิง",
+    "code": "รหัส",
+    "status": "สถานะ",
+    "batch": "Batch",
+    "firstDay": "ใช้ได้ตั้งแต่",
+    "lastDay": "ใช้ได้ถึง",
+    "order": "คำสั่งซื้อ",
+    "open": "ไม่กำหนด",
+    "allStatuses": "ทุกสถานะ",
+    "allBatches": "ทุก batch",
+    "noBatches": "ยังไม่มี Voucher batch",
+    "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข",
+    "notFound": "ไม่พบ Voucher product นี้",
+    "loadFailed": "โหลด Voucher product นี้ไม่สำเร็จ ลองใหม่อีกครั้ง"
+  }
+}

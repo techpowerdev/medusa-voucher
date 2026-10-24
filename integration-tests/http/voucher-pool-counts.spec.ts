@@ -103,6 +103,34 @@ medusaIntegrationTestRunner({
         expect(JSON.stringify(response.data)).not.toMatch(/POOL-|code_hash|code_encrypted|pin_encrypted/)
       })
 
+      it("lists Voucher products by Partner, then variant, with their names, a page at a time", async () => {
+        // Created out of order: the list must not follow creation.
+        const products = {
+          "300": await createVoucherProductVariant(getContainer(), "300"),
+          "100": await createVoucherProductVariant(getContainer(), "100"),
+          "200": await createVoucherProductVariant(getContainer(), "200"),
+        }
+        const names = (data: {
+          voucher_products: { product_variant: { title: string; product: { title: string } } }[]
+        }) =>
+          data.voucher_products.map((voucherProduct) => [
+            voucherProduct.product_variant.product.title,
+            voucherProduct.product_variant.title,
+          ])
+
+        const all = await api.get("/admin/voucher-products", headers)
+        const second = await api.get("/admin/voucher-products?limit=1&offset=1", headers)
+
+        expect(names(all.data)).toEqual([
+          ["Example voucher 100", "100"],
+          ["Example voucher 200", "200"],
+          ["Example voucher 300", "300"],
+        ])
+        expect(all.data.voucher_products[0].id).toBe(products["100"].voucherProductId)
+        expect(second.data.count).toBe(3)
+        expect(names(second.data)).toEqual([["Example voucher 200", "200"]])
+      })
+
       it("counts as Available exactly what an allocation can take", async () => {
         const product = await stockedPool()
         const allocate = async (quantity: number) => {

@@ -92,7 +92,10 @@ medusaIntegrationTestRunner({
 
         expect(response.data.count).toBe(2)
         expect(byId[empty.data.voucher_product.id]).toEqual(
-          expect.objectContaining({ available_vouchers: 0, product_variant: { id: variantId } })
+          expect.objectContaining({
+            available_vouchers: 0,
+            product_variant: expect.objectContaining({ id: variantId }),
+          })
         )
         expect(byId[other.data.voucher_product.id].available_vouchers).toBe(2)
         expect(JSON.stringify(response.data)).not.toMatch(/LIST-CODE|code_hash|code_encrypted/)
