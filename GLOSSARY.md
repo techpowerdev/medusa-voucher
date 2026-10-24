@@ -63,7 +63,7 @@ A Voucher assigned to an order but not yet confirmed as received by the customer
 _Avoid_: Reserved, sold
 
 **Delivery**:
-Sending the Voucher codes of an order's Allocations to the customer together, in one message through a channel, each as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried.
+Sending the Voucher codes of an order's Allocations to the customer together, in one message through a channel, each as text and as a QR code, with the PIN as text when there is one. Delivery can fail and be retried. Medusa's fulfillment of the order's Voucher lines is recorded after a Delivery succeeds; it is a record for the store, not the Delivery itself.
 _Avoid_: Dispatch, fulfilment, shipment
 
 **Delivered**:
