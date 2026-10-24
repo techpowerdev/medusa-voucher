@@ -132,3 +132,22 @@ export type AllocateVouchersResult = {
   // True only when this call made the Allocations, not when it returned existing ones.
   created: boolean
 }
+
+// A Voucher product's Pool by what can be done with it (see `countPoolByVariant`).
+export type PoolCounts = {
+  available: number
+  expired: number
+  under_minimum: number
+  allocated: number
+  delivered: number
+  void: number
+}
+
+export const emptyPoolCounts = (): PoolCounts => ({
+  available: 0,
+  expired: 0,
+  under_minimum: 0,
+  allocated: 0,
+  delivered: 0,
+  void: 0,
+})

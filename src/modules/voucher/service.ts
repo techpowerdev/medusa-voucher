@@ -26,6 +26,8 @@ import {
   AllocateVouchersInput,
   AllocateVouchersResult,
   AllocationShortfall,
+  emptyPoolCounts,
+  PoolCounts,
   VoucherCodeInput,
   VoucherEmailRenderer,
   VoucherModuleOptions,
@@ -447,23 +449,75 @@ class VoucherModuleService extends MedusaService({
       .select("id")
       .where({ variant_id: variantId, status: VoucherStatus.AVAILABLE, deleted_at: null })
       .whereNotIn("id", [...taken])
-      .where((eligible) =>
-        eligible.whereNull("valid_until").orWhere((ends) =>
-          ends
-            .where("valid_until", ">", now)
-            .whereRaw("valid_until - greatest(?::timestamptz, coalesce(valid_from, ?::timestamptz)) >= make_interval(days => ?)", [
-              now,
-              now,
-              this.minimumRemainingValidityDays_,
-            ])
-        )
-      )
+      .whereRaw(...this.sellableClause_(now))
       .orderByRaw("valid_until asc nulls last, created_at asc")
       .limit(quantity)
       .forUpdate()
       .skipLocked()
 
     return rows.map((row) => row.id)
+  }
+
+  // Whether an `available` Voucher can still be sold at `now` (Available in GLOSSARY.md): its
+  // Validity period has not ended and it has at least the Minimum remaining validity counted
+  // from the later of now and its start. Allocation and the Pool counts share it.
+  protected sellableClause_(now: Date): [string, (Date | number)[]] {
+    return [
+      "(valid_until is null or (valid_until > ? and valid_until - greatest(?::timestamptz, coalesce(valid_from, ?::timestamptz)) >= make_interval(days => ?)))",
+      [now, now, now, this.minimumRemainingValidityDays_],
+    ]
+  }
+
+  /**
+   * Counts the Pool of each of `variantIds` at `now`: Available (can still be sold), Expired
+   * (past its Validity period), under the Minimum remaining validity, Allocated, Delivered
+   * and Void. Computed when read; no status changes. A variant without Vouchers counts zeros.
+   */
+  @InjectManager()
+  async countPoolByVariant(
+    variantIds: string[],
+    now: Date = new Date(),
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<Map<string, PoolCounts>> {
+    const counts = new Map<string, PoolCounts>(variantIds.map((id) => [id, emptyPoolCounts()]))
+
+    if (!variantIds.length) {
+      return counts
+    }
+
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const [sellable, sellableBindings] = this.sellableClause_(now)
+    const rows: Record<keyof PoolCounts | "variant_id", string>[] = await knex("voucher")
+      .select("variant_id")
+      .select(
+        knex.raw(`count(*) filter (where status = ? and ${sellable})::int as available`, [
+          VoucherStatus.AVAILABLE,
+          ...sellableBindings,
+        ]),
+        knex.raw(
+          "count(*) filter (where status = ? or (status = ? and valid_until <= ?))::int as expired",
+          [VoucherStatus.EXPIRED, VoucherStatus.AVAILABLE, now]
+        ),
+        knex.raw(
+          `count(*) filter (where status = ? and valid_until > ? and not ${sellable})::int as under_minimum`,
+          [VoucherStatus.AVAILABLE, now, ...sellableBindings]
+        ),
+        knex.raw("count(*) filter (where status = ?)::int as allocated", [VoucherStatus.ALLOCATED]),
+        knex.raw("count(*) filter (where status = ?)::int as delivered", [VoucherStatus.DELIVERED]),
+        knex.raw("count(*) filter (where status = ?)::int as void", [VoucherStatus.VOID])
+      )
+      .whereIn("variant_id", variantIds)
+      .whereNull("deleted_at")
+      .groupBy("variant_id")
+
+    for (const { variant_id, ...row } of rows) {
+      counts.set(
+        variant_id,
+        Object.fromEntries(Object.entries(row).map(([key, value]) => [key, Number(value)])) as PoolCounts
+      )
+    }
+
+    return counts
   }
 
   /**
