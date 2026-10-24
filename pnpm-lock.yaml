@@ -15,6 +15,9 @@ importers:
         specifier: 1.5.4
         version: 1.5.4
     devDependencies:
+      '@hookform/resolvers':
+        specifier: 5.5.7
+        version: 5.5.7(@sinclair/typebox@0.34.52)(ajv@8.13.0)(react-hook-form@7.83.0(react@18.3.1))(zod@4.2.0)
       '@medusajs/admin-sdk':
         specifier: 2.21.2
         version: 2.21.2
@@ -99,6 +102,9 @@ importers:
       react-dom:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
+      react-hook-form:
+        specifier: 7.83.0
+        version: 7.83.0(react@18.3.1)
       react-i18next:
         specifier: 13.5.0
         version: 13.5.0(i18next@23.7.11)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -117,6 +123,9 @@ importers:
       yalc:
         specifier: ^1.0.0-pre.53
         version: 1.0.0-pre.53
+      zod:
+        specifier: 4.2.0
+        version: 4.2.0
 
 packages:
 

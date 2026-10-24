@@ -57,6 +57,25 @@ export const listPoolVouchers = (
     query,
   })
 
+export type ImportVoucherBatchBody = {
+  voucher_product_id: string
+  purchased_at: string
+  unit_cost?: number | null
+  reference?: string | null
+  redemption_instructions?: string | null
+  csv: string
+}
+
+export const importVoucherBatch = (body: ImportVoucherBatchBody) =>
+  sdk.client.fetch<{ voucher_batch: { id: string }; imported: number }>("/admin/voucher-batches/import", {
+    method: "POST",
+    body,
+  })
+
+// The import refuses a file with more rows than this: MAX_CSV_VOUCHERS, kept here so the admin
+// bundle does not take in the server's CSV parser.
+export const MAX_IMPORT_ROWS = 50_000
+
 export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue" | "purple" | "grey"> = {
   available: "green",
   expired: "red",
