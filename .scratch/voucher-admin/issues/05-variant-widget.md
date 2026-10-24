@@ -4,10 +4,10 @@
 
 **Blocked by:** 01 (Count a Voucher product's Pool by status); its link targets the page of ticket 03.
 
-**Status:** ready-for-agent
+**Status:** done (PR #29)
 
-- [ ] A variant can be marked with a Face value and currency; the store's default currency is preselected
-- [ ] A marked variant shows its Face value, Available count and a link to its Voucher product page
-- [ ] Editing is offered only while the Voucher product has no Vouchers; the API's refusal is shown otherwise
-- [ ] English and Thai labels
-- [ ] Checked on a real screen in the dev app with screenshots (rule 13)
+- [x] A variant can be marked with a Face value and currency; the store's default currency is preselected
+- [x] A marked variant shows its Face value, Available count and a link to its Voucher product page
+- [x] Editing is offered only while the Voucher product has no Vouchers; the API's refusal is shown otherwise
+- [x] English and Thai labels
+- [x] Checked on a real screen in the dev app with screenshots (rule 13)

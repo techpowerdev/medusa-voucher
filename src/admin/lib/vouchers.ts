@@ -57,6 +57,29 @@ export const listPoolVouchers = (
     query,
   })
 
+// The Voucher product a variant is marked as, if any, read through the variant's link.
+export const retrieveVariantVoucherProductId = async (productId: string, variantId: string) => {
+  const { variant } = await sdk.admin.product.retrieveVariant(productId, variantId, {
+    fields: "id,voucher_product.id",
+  })
+
+  return (variant as { voucher_product?: { id: string } | null }).voucher_product?.id ?? null
+}
+
+export type VoucherProductBody = { face_value: number; currency_code: string }
+
+export const createVoucherProduct = (body: VoucherProductBody & { variant_id: string }) =>
+  sdk.client.fetch<{ voucher_product: { id: string } }>("/admin/voucher-products", {
+    method: "POST",
+    body,
+  })
+
+export const updateVoucherProduct = (id: string, body: VoucherProductBody) =>
+  sdk.client.fetch<{ voucher_product: { id: string } }>(`/admin/voucher-products/${id}`, {
+    method: "POST",
+    body,
+  })
+
 export type ImportVoucherBatchBody = {
   voucher_product_id: string
   purchased_at: string

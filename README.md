@@ -2,11 +2,10 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist, with admin pages to review the Pool and import a CSV; marking a Voucher product from the admin does not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist, with admin pages to mark Voucher products, review the Pool and import a CSV. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
-- An admin widget to mark a variant as a Voucher product (the API already exists, see below).
 - Low stock and expiring-soon alerts.
 - Replacing a Delivered Voucher that did not work.
 - Store API for signed-in customers to view the codes they bought, with the QR code.
@@ -68,7 +67,7 @@ A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR
 
 A scheduled job, `mark-expired-vouchers`, runs every 15 minutes and records as `expired` the Available Vouchers whose validity has ended, logging how many as info. Allocated, Delivered and Void Vouchers keep their status. It needs a server whose `workerMode` is `worker` or `shared`, like the other jobs; the workflow behind it, `markExpiredVouchersWorkflow`, is exported too.
 
-In the admin, **Vouchers** in the sidebar lists the Voucher products with their counts, and each one has a page with its counts, Voucher batches and Vouchers, filtered by status or batch, with only the masked `code_hint` of each code. **Import CSV** on that page opens a dialog for a new Voucher batch: purchase date (today by default), unit cost, reference and Redemption instructions (starting as the latest batch's), and a CSV file read in the browser, of which only the name and row count are shown. It posts to the import API below and shows how many Vouchers were imported, or each problem with its line number. The pages are in English and Thai.
+In the admin, **Vouchers** in the sidebar lists the Voucher products with their counts, and each one has a page with its counts, Voucher batches and Vouchers, filtered by status or batch, with only the masked `code_hint` of each code. **Import CSV** on that page opens a dialog for a new Voucher batch: purchase date (today by default), unit cost, reference and Redemption instructions (starting as the latest batch's), and a CSV file read in the browser, of which only the name and row count are shown. It posts to the import API below and shows how many Vouchers were imported, or each problem with its line number. A **Voucher product** box on each product variant's page marks the variant as a Voucher product (Face value, and currency starting as the store's default), or shows its Face value, Available count and a link to its page, with an edit action while it has no Vouchers. The pages are in English and Thai.
 
 The link between a Voucher product and its variant is a Medusa module link, so run `npx medusa db:migrate` in the host application to create its table.
 
