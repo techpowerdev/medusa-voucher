@@ -102,6 +102,7 @@ class VoucherModuleService extends MedusaService({
   protected timezone_: string
   protected minimumRemainingValidityDays_: number
   protected emailRenderer_: VoucherEmailRenderer | null
+  protected automaticDelivery_: boolean
 
   constructor(container: Record<string, unknown>, options: VoucherModuleOptions) {
     // @ts-ignore
@@ -111,11 +112,19 @@ class VoucherModuleService extends MedusaService({
     this.timezone_ = options?.timezone ?? DEFAULT_TIMEZONE
     this.minimumRemainingValidityDays_ = options?.minimumRemainingValidityDays ?? 0
     this.emailRenderer_ = options?.delivery?.renderers?.email ?? null
+    this.automaticDelivery_ = options?.delivery?.automatic ?? true
   }
 
-  /** The options a Delivery is rendered with; `email` is null when the store has no renderer. */
+  /**
+   * The delivery options: whether allocation starts delivery on its own, and what a
+   * Delivery is rendered with (`email` is null when the store has no renderer).
+   */
   async getDeliverySettings() {
-    return { timezone: this.timezone_, renderers: { email: this.emailRenderer_ } }
+    return {
+      automatic: this.automaticDelivery_,
+      timezone: this.timezone_,
+      renderers: { email: this.emailRenderer_ },
+    }
   }
 
   /** Reads a vouchers CSV, turning its dates into whole days in the configured time zone. */
@@ -252,7 +261,7 @@ class VoucherModuleService extends MedusaService({
         const existing = await this.listOrderAllocations_(input.order_id, sharedContext)
 
         if (existing.length) {
-          return { allocated: existing, failures: [] }
+          return { allocated: existing, failures: [], created: false }
         }
 
         const open = await this.listAllocationFailures(
@@ -270,6 +279,7 @@ class VoucherModuleService extends MedusaService({
               requested: failure.quantity_requested,
               available: failure.quantity_available,
             })),
+            created: false,
           }
         }
       }
@@ -288,7 +298,7 @@ class VoucherModuleService extends MedusaService({
     const existing = await this.listOrderAllocations_(input.order_id, sharedContext)
 
     if (existing.length) {
-      return { allocated: existing, failures: [] }
+      return { allocated: existing, failures: [], created: false }
     }
 
     const taken = new Set<string>()
@@ -340,7 +350,7 @@ class VoucherModuleService extends MedusaService({
         sharedContext
       )
 
-      return { allocated: [], failures }
+      return { allocated: [], failures, created: false }
     }
 
     const rows = picks.flatMap(({ line, voucherIds }) =>
@@ -374,7 +384,7 @@ class VoucherModuleService extends MedusaService({
       unit_index: allocation.unit_index,
     }))
 
-    return { allocated, failures: [] }
+    return { allocated, failures: [], created: true }
   }
 
   // The Allocations that serve an order's units for the first time (Replacements excluded).

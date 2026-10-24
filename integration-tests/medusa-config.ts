@@ -40,7 +40,10 @@ module.exports = defineConfig({
         encryptionKey: "test-only-key-for-integration-tests-0123456789",
         // A Voucher needs at least this many days of validity left to be allocated.
         minimumRemainingValidityDays: 7,
+        // A spec that calls the delivery workflow itself sets this to "false" before the
+        // runner loads this file, so allocations in it do not send on their own.
         delivery: {
+          automatic: process.env.VOUCHER_TEST_DELIVERY_AUTOMATIC !== "false",
           renderers: { email: (input: VoucherEmailInput) => testEmailRenderer.render(input) },
         },
       },

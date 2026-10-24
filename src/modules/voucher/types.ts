@@ -19,6 +19,12 @@ export type VoucherModuleOptions = {
   minimumRemainingValidityDays?: number
   delivery?: {
     /**
+     * Sends an order's Vouchers on its own once they are allocated. Defaults to true. When
+     * false, nothing is sent and no Delivery is created until `deliverOrderVouchersWorkflow`
+     * is called.
+     */
+    automatic?: boolean
+    /**
      * Replaces the plugin's default email (English) with the store's own, per channel. It
      * receives the order and its Vouchers with their codes and returns the subject, HTML
      * and plain text. Refer to each Voucher's QR code in the HTML as `cid:<qr_code_cid>`,
@@ -109,4 +115,6 @@ export type AllocationShortfall = {
 export type AllocateVouchersResult = {
   allocated: AllocatedVoucher[]
   failures: AllocationShortfall[]
+  // True only when this call made the Allocations, not when it returned existing ones.
+  created: boolean
 }

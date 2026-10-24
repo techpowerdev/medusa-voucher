@@ -46,6 +46,10 @@ moduleIntegrationTestRunner<VoucherModuleService>({
   moduleOptions: { encryptionKey: "Xk3vQ9mZ2tLw7RfB5nYc8HdJ1sGpA4uE" },
   testSuite: ({ service }) => {
     describe("VoucherModuleService", () => {
+      it("delivers automatically unless delivery.automatic is set", async () => {
+        expect((await service.getDeliverySettings()).automatic).toBe(true)
+      })
+
       it("stores a Voucher product and refuses a Face value that is not positive", async () => {
         const stored = await service.createVoucherProducts({ face_value: 100, currency_code: "thb" })
 

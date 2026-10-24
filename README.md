@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and a workflow that emails an order's Vouchers exist; starting that email on its own after allocation, retrying failed emails and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated exist; retrying failed emails, recording Medusa's fulfillment of delivered orders and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
@@ -90,7 +90,16 @@ Known gaps: an order captured more than 7 days after it was placed, whose subscr
 
 ## Delivering vouchers
 
-`deliverOrderVouchersWorkflow` (exported from `@khumkha/medusa-voucher/workflows`) takes an `order_id` and emails the customer all of the order's Vouchers in one message, recorded as the order's Delivery on the `email` channel. It does not run on its own yet: call it from your own code until the plugin starts it after allocation.
+Once an allocation gives an order its Vouchers, the plugin emails them to the customer in one message, recorded as the order's Delivery on the `email` channel. The allocation emits `voucher.allocated` with `{ order_id }` after it has committed (a repeated allocation that finds the order already served emits nothing), and the plugin's subscriber to that event runs `deliverOrderVouchersWorkflow` (exported from `@khumkha/medusa-voucher/workflows`), so a slow or failing email provider never holds up or undoes an allocation. Set the plugin option `delivery.automatic` to `false` to send nothing on its own, for example before your email provider is set up; you then call the workflow with an `order_id` yourself.
+
+```ts
+options: {
+  encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
+  delivery: { automatic: false }, // optional; true by default
+},
+```
+
+A failed email is not retried on its own yet.
 
 - Each Voucher shows its code as text and as a QR code (the code alone, never the PIN), the PIN when there is one, the Partner (the Medusa product's title), the Face value, the first and last day it can be used in the plugin's `timezone`, and the Voucher batch's Redemption instructions. The subject and heading carry the order's display number.
 - It sends only for a Paid order that is not canceled, the same rule allocation uses; an order without Vouchers is left alone. Concurrent runs for one order send one message.

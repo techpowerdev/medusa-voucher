@@ -21,6 +21,10 @@ import {
 
 jest.setTimeout(60 * 1000)
 
+// These tests run the delivery workflow themselves, so allocations must not also send on
+// their own. Read by the test application's configuration in the runner's beforeAll.
+process.env.VOUCHER_TEST_DELIVERY_AUTOMATIC = "false"
+
 // What a base64 PNG QR code says when scanned.
 function scanQrCode(base64: string): string | undefined {
   const png = PNG.sync.read(Buffer.from(base64, "base64"))
@@ -44,6 +48,10 @@ medusaIntegrationTestRunner({
 
       // What the email provider was asked to send, as the local provider received it.
       const send = () => jest.spyOn(LocalNotificationService.prototype, "send")
+
+      afterAll(() => {
+        delete process.env.VOUCHER_TEST_DELIVERY_AUTOMATIC
+      })
 
       afterEach(() => jest.restoreAllMocks())
 
