@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated exist; retrying failed emails, recording Medusa's fulfillment of delivered orders and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, exist; recording Medusa's fulfillment of delivered orders and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
@@ -90,7 +90,7 @@ Known gaps: an order captured more than 7 days after it was placed, whose subscr
 
 ## Delivering vouchers
 
-Once an allocation gives an order its Vouchers, the plugin emails them to the customer in one message, recorded as the order's Delivery on the `email` channel. The allocation emits `voucher.allocated` with `{ order_id }` after it has committed (a repeated allocation that finds the order already served emits nothing), and the plugin's subscriber to that event runs `deliverOrderVouchersWorkflow` (exported from `@khumkha/medusa-voucher/workflows`), so a slow or failing email provider never holds up or undoes an allocation. Set the plugin option `delivery.automatic` to `false` to send nothing on its own, for example before your email provider is set up; you then call the workflow with an `order_id` yourself.
+Once an allocation gives an order its Vouchers, the plugin emails them to the customer in one message, recorded as the order's Delivery on the `email` channel. The allocation emits `voucher.allocated` with `{ order_id }` after it has committed (a repeated allocation that finds the order already served emits nothing), and the plugin's subscriber to that event runs `deliverOrderVouchersWorkflow` (exported from `@khumkha/medusa-voucher/workflows`), so a slow or failing email provider never holds up or undoes an allocation. Set the plugin option `delivery.automatic` to `false` to send nothing on its own, for example before your email provider is set up; you then call the workflow with an `order_id` yourself, and the retry job below sends nothing either.
 
 ```ts
 options: {
@@ -99,7 +99,7 @@ options: {
 },
 ```
 
-A failed email is not retried on its own yet.
+A scheduled job, `retry-voucher-deliveries`, runs every 15 minutes. It tries again the email Deliveries created in the last 7 days that failed fewer than 5 times, and those still sending after 10 minutes (a process that died mid-send), which it first marks failed with `Sending was interrupted`. It also sends the orders allocated between 7 days and 10 minutes ago that have no email Delivery, because the subscriber failed or the event never arrived. Only Paid orders are sent, on every try. A Delivery that reached 5 attempts stays failed for an operator. The job logs each order it sends this way as a warning, each retry as info, and each order it could not try as an error, which it tries again on its next run. Like the allocation recovery job, it needs a server whose `workerMode` is `worker` or `shared`; the workflow behind it, `retryVoucherDeliveriesWorkflow`, is exported too.
 
 - Each Voucher shows its code as text and as a QR code (the code alone, never the PIN), the PIN when there is one, the Partner (the Medusa product's title), the Face value, the first and last day it can be used in the plugin's `timezone`, and the Voucher batch's Redemption instructions. The subject and heading carry the order's display number.
 - It sends only for a Paid order that is not canceled, the same rule allocation uses; an order without Vouchers is left alone. Concurrent runs for one order send one message.
