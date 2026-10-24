@@ -575,6 +575,40 @@ class VoucherModuleService extends MedusaService({
   }
 
   /**
+   * Marks the Deliveries that have been sending since before `before` as failed, as a process
+   * that died mid-send left them, so they are tried again like any failed Delivery. Returns
+   * their ids.
+   */
+  @InjectManager()
+  async releaseStaleDeliveries(
+    input: { before: Date },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<string[]> {
+    return await this.releaseStaleDeliveries_(input, sharedContext)
+  }
+
+  // One conditional UPDATE, so a Delivery that completes meanwhile is not marked failed.
+  @InjectTransactionManager()
+  protected async releaseStaleDeliveries_(
+    input: { before: Date },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<string[]> {
+    const knex = transactionKnex(sharedContext, "releaseStaleDeliveries_")
+
+    const rows: { id: string }[] = await knex("voucher_delivery")
+      .where({ status: DeliveryStatus.SENDING, deleted_at: null })
+      .where("updated_at", "<", input.before)
+      .update({
+        status: DeliveryStatus.FAILED,
+        last_error: "Sending was interrupted",
+        updated_at: new Date(),
+      })
+      .returning("id")
+
+    return rows.map((row) => row.id)
+  }
+
+  /**
    * Records that the email provider accepted a claimed Delivery: it becomes delivered and the
    * Vouchers it sent become Delivered, together.
    */
