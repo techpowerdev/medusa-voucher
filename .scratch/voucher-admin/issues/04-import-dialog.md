@@ -4,7 +4,7 @@
 
 **Blocked by:** 03 (Vouchers pages in the admin).
 
-**Status:** done (feature/voucher-admin-import)
+**Status:** done (PR #28)
 
 - [x] A valid file creates a batch and the page shows the new counts
 - [x] A file with problems imports nothing and lists the line numbers, never a code
