@@ -1,39 +1,25 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
+import { DataTable } from "@medusajs/dashboard/components"
+import { useQueryParams } from "@medusajs/dashboard/hooks"
+import { getLocaleAmount } from "@medusajs/dashboard/lib"
 import { ReceiptPercent } from "@medusajs/icons"
-import {
-  Container,
-  createDataTableColumnHelper,
-  DataTable,
-  DataTablePaginationState,
-  Heading,
-  Text,
-  useDataTable,
-} from "@medusajs/ui"
+import { Container, createDataTableColumnHelper } from "@medusajs/ui"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { useNavigate } from "react-router-dom"
-import { usePaginationTranslations } from "../../lib/locale"
-import { formatMoney, listVoucherProducts, VOUCHER_NS, VoucherProduct } from "../../lib/vouchers"
+import { listVoucherProducts, VOUCHER_NS, VoucherProduct } from "../../lib/vouchers"
 
 const PAGE_SIZE = 20
 
 const columnHelper = createDataTableColumnHelper<VoucherProduct>()
 
 const VouchersPage = () => {
-  const { t, i18n } = useTranslation(VOUCHER_NS)
-  const navigate = useNavigate()
-  const paginationTranslations = usePaginationTranslations()
-  const [pagination, setPagination] = useState<DataTablePaginationState>({
-    pageIndex: 0,
-    pageSize: PAGE_SIZE,
-  })
-  const limit = pagination.pageSize
-  const offset = pagination.pageIndex * limit
+  const { t } = useTranslation(VOUCHER_NS)
+  const { offset } = useQueryParams(["offset"])
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["voucher-products", limit, offset],
-    queryFn: () => listVoucherProducts({ limit, offset }),
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["voucher-products", offset],
+    queryFn: () => listVoucherProducts({ limit: PAGE_SIZE, offset: offset ? parseInt(offset) : 0 }),
     placeholderData: keepPreviousData,
   })
 
@@ -50,8 +36,7 @@ const VouchersPage = () => {
       columnHelper.accessor("product_variant.title", { header: t("list.variant") }),
       columnHelper.accessor("face_value", {
         header: t("list.faceValue"),
-        cell: ({ row }) =>
-          formatMoney(row.original.face_value, row.original.currency_code, i18n.language),
+        cell: ({ row }) => getLocaleAmount(row.original.face_value, row.original.currency_code),
       }),
       count("available"),
       count("expired"),
@@ -59,30 +44,27 @@ const VouchersPage = () => {
       count("allocated"),
       count("delivered"),
     ]
-  }, [t, i18n.language])
+  }, [t])
 
-  const table = useDataTable({
-    data: data?.voucher_products ?? [],
-    columns,
-    getRowId: (voucherProduct) => voucherProduct.id,
-    rowCount: data?.count ?? 0,
-    isLoading,
-    pagination: { state: pagination, onPaginationChange: setPagination },
-    onRowClick: (_, voucherProduct) => navigate(`/vouchers/${voucherProduct.id}`),
-  })
+  if (isError) {
+    throw error
+  }
 
   return (
     <Container className="divide-y p-0">
-      <DataTable instance={table}>
-        <DataTable.Toolbar className="flex flex-col items-start gap-1 px-6 py-4">
-          <Heading>{t("list.title")}</Heading>
-          <Text size="small" leading="compact" className="text-ui-fg-subtle">
-            {t("list.description")}
-          </Text>
-        </DataTable.Toolbar>
-        <DataTable.Table emptyState={{ empty: { heading: t("list.empty") } }} />
-        <DataTable.Pagination translations={paginationTranslations} />
-      </DataTable>
+      <DataTable
+        data={data?.voucher_products}
+        columns={columns}
+        rowCount={data?.count}
+        getRowId={(voucherProduct) => voucherProduct.id}
+        rowHref={(voucherProduct) => `/vouchers/${voucherProduct.id}`}
+        pageSize={PAGE_SIZE}
+        enableSearch={false}
+        isLoading={isPending}
+        heading={t("list.title")}
+        subHeading={t("list.description")}
+        emptyState={{ empty: { heading: t("list.empty") } }}
+      />
     </Container>
   )
 }
@@ -93,5 +75,15 @@ export const config = defineRouteConfig({
   translationNs: "medusa-voucher",
   icon: ReceiptPercent,
 })
+
+const VouchersBreadcrumb = () => {
+  const { t } = useTranslation(VOUCHER_NS)
+
+  return <span>{t("list.title")}</span>
+}
+
+export const handle = {
+  breadcrumb: () => <VouchersBreadcrumb />,
+}
 
 export default VouchersPage

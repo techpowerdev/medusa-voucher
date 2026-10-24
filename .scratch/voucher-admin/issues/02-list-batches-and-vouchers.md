@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Count a Voucher product's Pool by status).
 
-**Status:** done (feature/voucher-admin-pool-lists, pending review)
+**Status:** done (PR #25)
 
 - [x] Batches come newest first with their counts, a page at a time
 - [x] Vouchers come soonest to expire first, open-ended last, with usable days in the store's time zone

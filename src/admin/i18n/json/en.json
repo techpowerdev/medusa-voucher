@@ -32,11 +32,7 @@
     "lastDay": "Last day",
     "order": "Order",
     "open": "Open",
-    "allStatuses": "All statuses",
-    "allBatches": "All batches",
     "noBatches": "No Voucher batches yet.",
-    "noVouchers": "No Vouchers match.",
-    "notFound": "This Voucher product was not found.",
-    "loadFailed": "This Voucher product could not be loaded. Try again."
+    "noVouchers": "No Vouchers match."
   }
 }

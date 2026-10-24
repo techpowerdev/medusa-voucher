@@ -4,7 +4,7 @@
 
 **Blocked by:** none.
 
-**Status:** done (feature/voucher-admin-pool-counts, pending review)
+**Status:** done (PR #24)
 
 - [x] Counts treat an expired Voucher and an under-minimum Voucher apart from Available, and a Voucher not yet valid but with enough validity left as Available
 - [x] `available_vouchers` in the list equals the Available count

@@ -32,11 +32,7 @@
     "lastDay": "ใช้ได้ถึง",
     "order": "คำสั่งซื้อ",
     "open": "ไม่กำหนด",
-    "allStatuses": "ทุกสถานะ",
-    "allBatches": "ทุก batch",
     "noBatches": "ยังไม่มี Voucher batch",
-    "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข",
-    "notFound": "ไม่พบ Voucher product นี้",
-    "loadFailed": "โหลด Voucher product นี้ไม่สำเร็จ ลองใหม่อีกครั้ง"
+    "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข"
   }
 }

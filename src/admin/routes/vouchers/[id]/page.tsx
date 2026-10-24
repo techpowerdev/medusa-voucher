@@ -1,23 +1,19 @@
-import { Spinner } from "@medusajs/icons"
-import { FetchError } from "@medusajs/js-sdk"
+import { DataTable } from "@medusajs/dashboard/components"
+import { useDate, useQueryParams } from "@medusajs/dashboard/hooks"
+import { getLocaleAmount } from "@medusajs/dashboard/lib"
 import {
   Container,
   createDataTableColumnHelper,
-  DataTable,
-  DataTablePaginationState,
+  createDataTableFilterHelper,
   Heading,
-  Select,
   StatusBadge,
   Text,
-  useDataTable,
 } from "@medusajs/ui"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { Link, useParams } from "react-router-dom"
-import { formatDate, formatDay, usePaginationTranslations } from "../../../lib/locale"
+import { Link, UIMatch, useParams } from "react-router-dom"
 import {
-  formatMoney,
   listPoolVouchers,
   listVoucherBatches,
   POOL_STATUSES,
@@ -34,15 +30,27 @@ import {
 const PAGE_SIZE = 20
 // The batch filter offers the newest batches, as many as one request returns.
 const BATCH_FILTER_SIZE = 100
-const ALL = "all"
-
-const isNotFound = (error: unknown) => error instanceof FetchError && error.status === 404
+// Each table keeps its page and filters in the URL under its own prefix.
+const BATCHES_PREFIX = "b"
+const VOUCHERS_PREFIX = "v"
 
 const batchColumns = createDataTableColumnHelper<VoucherBatch>()
 const voucherColumns = createDataTableColumnHelper<PoolVoucher>()
+const voucherFilters = createDataTableFilterHelper<{ status: PoolStatus; batch_id: string }>()
 
-const usePage = () =>
-  useState<DataTablePaginationState>({ pageIndex: 0, pageSize: PAGE_SIZE })
+const useVoucherProduct = (id: string) =>
+  useQuery({
+    queryKey: ["voucher-product", id],
+    queryFn: () => retrieveVoucherProduct(id),
+  })
+
+// A calendar day such as "2026-12-31", read as that day where the admin is, so it is shown
+// as the same day.
+const localDay = (day: string) => `${day}T00:00:00`
+
+// The table stores each filter's value as JSON, and `null` while a filter has no value yet.
+const filterValue = <T,>(param: string | undefined): T | undefined =>
+  (param ? JSON.parse(param) : null) ?? undefined
 
 const PoolSection = ({ counts }: { counts: PoolCounts }) => {
   const { t } = useTranslation(VOUCHER_NS)
@@ -69,15 +77,17 @@ const PoolSection = ({ counts }: { counts: PoolCounts }) => {
 }
 
 const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
-  const { t, i18n } = useTranslation(VOUCHER_NS)
-  const [pagination, setPagination] = usePage()
-  const paginationTranslations = usePaginationTranslations()
-  const limit = pagination.pageSize
-  const offset = pagination.pageIndex * limit
+  const { t } = useTranslation(VOUCHER_NS)
+  const { getFullDate } = useDate()
+  const { offset } = useQueryParams(["offset"], BATCHES_PREFIX)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["voucher-batches", voucherProduct.id, limit, offset],
-    queryFn: () => listVoucherBatches(voucherProduct.id, { limit, offset }),
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["voucher-batches", voucherProduct.id, offset],
+    queryFn: () =>
+      listVoucherBatches(voucherProduct.id, {
+        limit: PAGE_SIZE,
+        offset: offset ? parseInt(offset) : 0,
+      }),
     placeholderData: keepPreviousData,
   })
 
@@ -85,7 +95,7 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
     () => [
       batchColumns.accessor("purchased_at", {
         header: t("detail.purchasedAt"),
-        cell: ({ getValue }) => formatDate(getValue(), i18n.language),
+        cell: ({ getValue }) => getFullDate({ date: getValue() }),
       }),
       batchColumns.accessor("reference", {
         header: t("detail.reference"),
@@ -96,9 +106,7 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
         cell: ({ getValue }) => {
           const unitCost = getValue()
 
-          return unitCost === null
-            ? "-"
-            : formatMoney(unitCost, voucherProduct.currency_code, i18n.language)
+          return unitCost === null ? "-" : getLocaleAmount(unitCost, voucherProduct.currency_code)
         },
       }),
       ...POOL_STATUSES.map((status) =>
@@ -109,44 +117,49 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
         })
       ),
     ],
-    [t, i18n.language, voucherProduct.currency_code]
+    [t, getFullDate, voucherProduct.currency_code]
   )
 
-  const table = useDataTable({
-    data: data?.batches ?? [],
-    columns,
-    getRowId: (batch) => batch.id,
-    rowCount: data?.count ?? 0,
-    isLoading,
-    pagination: { state: pagination, onPaginationChange: setPagination },
-  })
+  if (isError) {
+    throw error
+  }
 
   return (
     <Container className="divide-y p-0">
-      <DataTable instance={table}>
-        <DataTable.Toolbar className="px-6 py-4">
-          <Heading level="h2">{t("detail.batches")}</Heading>
-        </DataTable.Toolbar>
-        <DataTable.Table emptyState={{ empty: { heading: t("detail.noBatches") } }} />
-        <DataTable.Pagination translations={paginationTranslations} />
-      </DataTable>
+      <DataTable
+        data={data?.batches}
+        columns={columns}
+        rowCount={data?.count}
+        getRowId={(batch) => batch.id}
+        pageSize={PAGE_SIZE}
+        enableSearch={false}
+        prefix={BATCHES_PREFIX}
+        isLoading={isPending}
+        heading={t("detail.batches")}
+        headingLevel="h2"
+        emptyState={{ empty: { heading: t("detail.noBatches") } }}
+      />
     </Container>
   )
 }
 
 const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
-  const { t, i18n } = useTranslation(VOUCHER_NS)
-  const [pagination, setPagination] = usePage()
-  const paginationTranslations = usePaginationTranslations()
-  const [status, setStatus] = useState<PoolStatus | undefined>()
-  const [batchId, setBatchId] = useState<string | undefined>()
-  const limit = pagination.pageSize
-  const offset = pagination.pageIndex * limit
+  const { t } = useTranslation(VOUCHER_NS)
+  const { getFullDate } = useDate()
+  const { offset, status, batch_id } = useQueryParams(
+    ["offset", "status", "batch_id"],
+    VOUCHERS_PREFIX
+  )
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["pool-vouchers", voucherProduct.id, status, batchId, limit, offset],
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["pool-vouchers", voucherProduct.id, offset, status, batch_id],
     queryFn: () =>
-      listPoolVouchers(voucherProduct.id, { limit, offset, status, batch_id: batchId }),
+      listPoolVouchers(voucherProduct.id, {
+        limit: PAGE_SIZE,
+        offset: offset ? parseInt(offset) : 0,
+        status: filterValue(status),
+        batch_id: filterValue(batch_id),
+      }),
     placeholderData: keepPreviousData,
   })
   const { data: batchOptions } = useQuery({
@@ -154,11 +167,27 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
     queryFn: () => listVoucherBatches(voucherProduct.id, { limit: BATCH_FILTER_SIZE, offset: 0 }),
   })
 
-  // A new filter starts again from the first page.
-  const filter = <T,>(set: (value: T) => void) => (value: T) => {
-    set(value)
-    setPagination((page) => ({ ...page, pageIndex: 0 }))
-  }
+  const filters = useMemo(
+    () => [
+      voucherFilters.accessor("status", {
+        type: "radio",
+        label: t("detail.status"),
+        options: POOL_STATUSES.map((poolStatus) => ({
+          label: t(`status.${poolStatus}`),
+          value: poolStatus,
+        })),
+      }),
+      voucherFilters.accessor("batch_id", {
+        type: "radio",
+        label: t("detail.batch"),
+        options: (batchOptions?.batches ?? []).map((batch) => ({
+          label: batch.reference ?? getFullDate({ date: batch.purchased_at }),
+          value: batch.id,
+        })),
+      }),
+    ],
+    [t, getFullDate, batchOptions]
+  )
 
   const columns = useMemo(
     () => [
@@ -182,7 +211,7 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         cell: ({ getValue }) => {
           const day = getValue()
 
-          return day ? formatDay(day, i18n.language) : t("detail.open")
+          return day ? getFullDate({ date: localDay(day) }) : t("detail.open")
         },
       }),
       voucherColumns.accessor("last_day", {
@@ -190,7 +219,7 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         cell: ({ getValue }) => {
           const day = getValue()
 
-          return day ? formatDay(day, i18n.language) : t("detail.open")
+          return day ? getFullDate({ date: localDay(day) }) : t("detail.open")
         },
       }),
       voucherColumns.accessor("order", {
@@ -208,101 +237,48 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         },
       }),
     ],
-    [t, i18n.language]
+    [t, getFullDate]
   )
 
-  const table = useDataTable({
-    data: data?.vouchers ?? [],
-    columns,
-    getRowId: (voucher) => voucher.id,
-    rowCount: data?.count ?? 0,
-    isLoading,
-    pagination: { state: pagination, onPaginationChange: setPagination },
-  })
+  if (isError) {
+    throw error
+  }
 
   return (
     <Container className="divide-y p-0">
-      <DataTable instance={table}>
-        <DataTable.Toolbar className="flex flex-col items-start justify-between gap-2 px-6 py-4 md:flex-row md:items-center">
-          <Heading level="h2">{t("detail.vouchers")}</Heading>
-          <div className="flex gap-2">
-            <Select
-              size="small"
-              value={status ?? ALL}
-              onValueChange={filter((value: string) =>
-                setStatus(value === ALL ? undefined : (value as PoolStatus))
-              )}
-            >
-              <Select.Trigger className="whitespace-nowrap">
-                <Select.Value />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value={ALL}>{t("detail.allStatuses")}</Select.Item>
-                {POOL_STATUSES.map((poolStatus) => (
-                  <Select.Item key={poolStatus} value={poolStatus}>
-                    {t(`status.${poolStatus}`)}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select>
-            <Select
-              size="small"
-              value={batchId ?? ALL}
-              onValueChange={filter((value: string) => setBatchId(value === ALL ? undefined : value))}
-            >
-              <Select.Trigger className="whitespace-nowrap">
-                <Select.Value />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value={ALL}>{t("detail.allBatches")}</Select.Item>
-                {batchOptions?.batches.map((batch) => (
-                  <Select.Item key={batch.id} value={batch.id}>
-                    {batch.reference ?? formatDate(batch.purchased_at, i18n.language)}
-                  </Select.Item>
-                ))}
-              </Select.Content>
-            </Select>
-          </div>
-        </DataTable.Toolbar>
-        <DataTable.Table
-          emptyState={{
-            empty: { heading: t("detail.noVouchers") },
-            filtered: { heading: t("detail.noVouchers") },
-          }}
-        />
-        <DataTable.Pagination translations={paginationTranslations} />
-      </DataTable>
+      <DataTable
+        data={data?.vouchers}
+        columns={columns}
+        filters={filters}
+        rowCount={data?.count}
+        getRowId={(voucher) => voucher.id}
+        pageSize={PAGE_SIZE}
+        enableSearch={false}
+        prefix={VOUCHERS_PREFIX}
+        isLoading={isPending}
+        heading={t("detail.vouchers")}
+        headingLevel="h2"
+        emptyState={{
+          empty: { heading: t("detail.noVouchers") },
+          filtered: { heading: t("detail.noVouchers") },
+        }}
+      />
     </Container>
   )
 }
 
 const VoucherProductPage = () => {
-  const { t, i18n } = useTranslation(VOUCHER_NS)
+  const { t } = useTranslation(VOUCHER_NS)
   const { id } = useParams()
+  const { data, isPending, isError, error } = useVoucherProduct(id!)
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["voucher-product", id],
-    queryFn: () => retrieveVoucherProduct(id!),
-    // A missing Voucher product stays missing; other failures are retried as usual.
-    retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
-  })
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <Spinner />
-      </div>
-    )
+  // The dashboard's error page tells a missing Voucher product from a failure.
+  if (isError) {
+    throw error
   }
 
-  if (error || !data) {
-    return (
-      <Container className="px-6 py-4">
-        <Text size="small" className="text-ui-fg-subtle">
-          {t(isNotFound(error) ? "detail.notFound" : "detail.loadFailed")}
-        </Text>
-      </Container>
-    )
+  if (isPending) {
+    return null
   }
 
   const voucherProduct = data.voucher_product
@@ -310,15 +286,12 @@ const VoucherProductPage = () => {
   return (
     <div className="flex flex-col gap-y-3">
       <Container className="flex flex-col gap-y-1 px-6 py-4">
-        <Link to="/vouchers" className="text-ui-fg-subtle txt-compact-small hover:text-ui-fg-base">
-          {t("list.title")}
-        </Link>
         <Heading>
           {voucherProduct.product_variant.product.title} · {voucherProduct.product_variant.title}
         </Heading>
         <Text size="small" leading="compact" className="text-ui-fg-subtle">
           {t("list.faceValue")}:{" "}
-          {formatMoney(voucherProduct.face_value, voucherProduct.currency_code, i18n.language)}
+          {getLocaleAmount(voucherProduct.face_value, voucherProduct.currency_code)}
         </Text>
       </Container>
       <PoolSection counts={voucherProduct.counts} />
@@ -326,6 +299,26 @@ const VoucherProductPage = () => {
       <VouchersSection voucherProduct={voucherProduct} />
     </div>
   )
+}
+
+const VoucherProductBreadcrumb = ({ params }: UIMatch) => {
+  const { data } = useVoucherProduct(params.id!)
+
+  if (!data) {
+    return null
+  }
+
+  const { product_variant } = data.voucher_product
+
+  return (
+    <span>
+      {product_variant.product.title} · {product_variant.title}
+    </span>
+  )
+}
+
+export const handle = {
+  breadcrumb: (match: UIMatch) => <VoucherProductBreadcrumb {...match} />,
 }
 
 export default VoucherProductPage

@@ -4,10 +4,10 @@
 
 **Blocked by:** 06 (Turn Vouchers past their Validity period Expired), which follows 02.
 
-**Status:** ready-for-agent
+**Status:** done (PR #27)
 
-- [ ] The list shows every Voucher product with its counts and links to its page
-- [ ] The Voucher product page shows counts, batches and Vouchers, with the status and batch filters and paging
-- [ ] No code, PIN or hash appears on either page
-- [ ] English and Thai labels
-- [ ] Checked on a real screen in the dev app with screenshots (rule 13)
+- [x] The list shows every Voucher product with its counts and links to its page
+- [x] The Voucher product page shows counts, batches and Vouchers, with the status and batch filters and paging
+- [x] No code, PIN or hash appears on either page
+- [x] English and Thai labels
+- [x] Checked on a real screen in the dev app with screenshots (rule 13)

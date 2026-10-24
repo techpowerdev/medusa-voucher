@@ -57,14 +57,11 @@ export const listPoolVouchers = (
     query,
   })
 
-export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue" | "grey"> = {
+export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue" | "purple" | "grey"> = {
   available: "green",
   expired: "red",
   under_minimum: "orange",
   allocated: "blue",
-  delivered: "grey",
+  delivered: "purple",
   void: "grey",
 }
-
-export const formatMoney = (amount: number, currencyCode: string, language: string) =>
-  new Intl.NumberFormat(language, { style: "currency", currency: currencyCode.toUpperCase() }).format(amount)
