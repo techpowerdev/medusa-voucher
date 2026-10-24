@@ -50,5 +50,23 @@
     "submit": "นำเข้า",
     "success": "นำเข้า Voucher แล้ว {{imported}} ใบ",
     "failed": "ไม่ได้นำเข้า Voucher"
+  },
+  "widget": {
+    "title": "Voucher product",
+    "notMarked": "ตัวเลือกนี้ยังไม่ได้ส่ง Voucher กำหนดเป็น Voucher product เพื่อขาย Voucher ที่ซื้อมาจาก Partner",
+    "mark": "กำหนดเป็น Voucher product",
+    "markTitle": "กำหนดเป็น Voucher product",
+    "markHint": "ขายหนึ่งชิ้นส่ง Voucher หนึ่งใบตามมูลค่าหน้าบัตรนี้ เปลี่ยนไม่ได้หลังนำเข้า Voucher แล้ว",
+    "editTitle": "แก้ไข Voucher product",
+    "currency": "สกุลเงิน",
+    "available": "พร้อมขาย",
+    "view": "ดู Voucher",
+    "locked": "มี Voucher แล้ว จึงเปลี่ยนมูลค่าหน้าบัตรและสกุลเงินไม่ได้",
+    "marked": "กำหนดเป็น Voucher product แล้ว",
+    "saved": "บันทึก Voucher product แล้ว",
+    "save": "บันทึก",
+    "faceValueRequired": "ใส่มูลค่าหน้าบัตรที่มากกว่า 0",
+    "currencyRequired": "เลือกสกุลเงิน",
+    "loadFailed": "โหลดข้อมูล Voucher product ไม่สำเร็จ โหลดหน้าใหม่เพื่อลองอีกครั้ง"
   }
 }

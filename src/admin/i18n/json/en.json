@@ -50,5 +50,23 @@
     "submit": "Import",
     "success": "Imported {{imported}} Vouchers",
     "failed": "Nothing was imported"
+  },
+  "widget": {
+    "title": "Voucher product",
+    "notMarked": "This variant does not deliver Vouchers. Mark it to sell Vouchers bought from its Partner.",
+    "mark": "Mark as Voucher product",
+    "markTitle": "Mark as Voucher product",
+    "markHint": "Each unit sold delivers one Voucher of this Face value. It cannot be changed once Vouchers are imported.",
+    "editTitle": "Edit Voucher product",
+    "currency": "Currency",
+    "available": "Available",
+    "view": "View Vouchers",
+    "locked": "Has Vouchers, so the Face value and currency can no longer change.",
+    "marked": "Marked as a Voucher product",
+    "saved": "Voucher product saved",
+    "save": "Save",
+    "faceValueRequired": "Enter a Face value above 0",
+    "currencyRequired": "Choose a currency",
+    "loadFailed": "Could not load the Voucher product. Reload the page to try again."
   }
 }
