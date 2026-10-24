@@ -26,6 +26,11 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
 - Copy `.env.template` → `.env` (for `db:generate`) and `.env.test.template` → `.env.test` (for module tests). Real `.env*` files are git-ignored; never commit them.
 - HTTP integration tests use `medusaIntegrationTestRunner` with `integration-tests/medusa-config.ts` (a test-only app that registers this plugin via `resolve: path.resolve(__dirname, "..")`). `medusaConfigFile` must be an absolute path. The runner applies the plugin's migrations, so run `pnpm db:generate` after any model change. Add API route and workflow tests here as the plugin gains them (`integration-tests/http/plugin.spec.ts` only proves the plugin loads).
 - Tests (`__tests__/`, `integration-tests/`) are excluded from `tsconfig.json`, so they are not compiled into the published build.
+- **Dev app for screen checks (rule 13):** `../medusa-voucher-dev-app`, a Medusa app on the same Medusa version, outside this repo. The backend is in `apps/backend`; it uses pnpm 10 (`packageManager`), the database `medusa_voucher_dev_app` in this project's PostgreSQL container, and no Redis (never point it at another project's Redis). Its `medusa-config.ts` registers the plugin and the Notification module with `@perseidesjs/notification-nodemailer` sending to Mailpit, as the README describes. To run a change:
+  1. In this repo: `docker compose up -d`, then `pnpm medusa plugin:publish`.
+  2. In `../medusa-voucher-dev-app`: `docker compose up -d` (Mailpit: SMTP on 1025, inbox at http://localhost:8025).
+  3. In `apps/backend`: `npx medusa plugin:add @khumkha/medusa-voucher`, `npx medusa db:migrate`, then `npx medusa develop` (admin at http://localhost:9000/app).
+  4. Until delivery starts on its own: `npx medusa exec ./src/scripts/deliver-order-vouchers.ts <order_id>`.
 - CI (`.github/workflows/ci.yml`) runs lint, build, a migration drift check, unit, module and HTTP tests against a PostgreSQL service.
 - `.github/workflows/update-medusa.yml` (from the official Medusa plugin starter, with `actions/checkout` bumped to v4) is a manually triggered workflow that opens a PR bumping the `@medusajs/*` versions (the action detects pnpm and enables corepack). Review that PR: it must keep dev and peer versions in sync and update `pnpm-lock.yaml`.
 
@@ -55,6 +60,7 @@ These come from mistakes already made in this repo. Follow them every time.
 10. **Report faithfully.** Every handoff lists what was not verified, every deviation from the agreed design or seam, tests that never went red, and any step the user must take. Do not describe something as done or tested when it was only written.
 11. **No leftovers.** No `console.log` or debug markers in `src/` or `integration-tests/` (CI fails on them), no commented-out code, no files outside the task.
 12. **Say what you are doing during long runs.** Before a multi-step command sequence, state in one line what and why; do not go silent while builds and tests run.
+13. **Check every change on a real screen and put screenshots in the PR.** Passing tests are not enough. Before the handoff, run the change in the dev app (see Environment) and use it the way a reviewer or customer would: the admin page, the store API response, or the email received in Mailpit. When nothing starts it from a screen yet, start it with `medusa exec` and capture what comes out (for example the email). Upload the screenshots to the PR's Evidence section through GitHub in the browser (user-attachments links; never commit them to the repo), and say under each what it shows. This holds even though the `pr` skill does not ask for screenshots (it comes from `mattpocock/skills`, so edits there would be overwritten). If something could not be checked on screen, say so in the PR and in the handoff.
 
 ## Agent skills
 
