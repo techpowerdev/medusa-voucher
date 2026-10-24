@@ -2,7 +2,7 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures exist; sending vouchers to customers and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and a workflow that emails an order's Vouchers exist; starting that email on its own after allocation, retrying failed emails and the admin pages do not yet. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
@@ -87,6 +87,85 @@ When a Voucher product's Pool cannot cover a Paid order, nothing is allocated an
 An order that gets its Vouchers by any route (a retry, a subscriber or the recovery job) has its open failures resolved automatically, with `resolved_by` set to `system`.
 
 Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
+
+## Delivering vouchers
+
+`deliverOrderVouchersWorkflow` (exported from `@khumkha/medusa-voucher/workflows`) takes an `order_id` and emails the customer all of the order's Vouchers in one message, recorded as the order's Delivery on the `email` channel. It does not run on its own yet: call it from your own code until the plugin starts it after allocation.
+
+- Each Voucher shows its code as text and as a QR code (the code alone, never the PIN), the PIN when there is one, the Partner (the Medusa product's title), the Face value, the first and last day it can be used in the plugin's `timezone`, and the Voucher batch's Redemption instructions. The subject and heading carry the order's display number.
+- It sends only for a Paid order that is not canceled, the same rule allocation uses; an order without Vouchers is left alone. Concurrent runs for one order send one message.
+- When the provider accepts the message, the Delivery becomes `delivered` and the Vouchers `delivered`. When the order has no email, or the provider throws, the Delivery becomes `failed` and the Vouchers stay allocated to the order. The error stored on the Delivery is Medusa's own message; the provider's full message goes to the error log with the order's codes and PINs removed.
+- Codes go only into the email's content and attachments, never into the notification's `data`, which Medusa stores as plain JSON in its `notification` table.
+
+### Email provider
+
+The plugin ships no email provider: it sends through whatever provider your application configures on the Notification module's `email` channel (Medusa allows one provider per channel, and it serves every email of the store). Medusa's default configuration has only a local provider on the `feed` channel, so without this every Delivery fails. Declaring the Notification module replaces that default, so add the local provider back on `feed` if you use it. A provider must:
+
+- send the notification's `content.subject` and `content.html` (and `content.text` if it supports a plain-text part);
+- send `attachments` with their `id` as the content id and `disposition: "inline"`, decoding the base64 `content` (the HTML refers to each QR code as `cid:<id>`; data URIs are not used because Gmail blocks them);
+- not log the notification's content or attachments.
+
+[`@perseidesjs/notification-nodemailer`](https://www.npmjs.com/package/@perseidesjs/notification-nodemailer) sends through your own SMTP account and meets these (checked against its 3.2.0 source; it sends the HTML and ignores the plain text when HTML is present). Its repository is archived and it was built against Medusa 2.14, so try it against your Medusa version before launch.
+
+```ts
+module.exports = defineConfig({
+  // ...
+  modules: [
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "@perseidesjs/notification-nodemailer/providers/nodemailer",
+            id: "nodemailer",
+            options: {
+              channels: ["email"],
+              from: process.env.SMTP_FROM, // for example "My Store <vouchers@example.com>"
+              host: process.env.SMTP_HOST,
+              port: Number(process.env.SMTP_PORT), // 465 with secure: true, or 587
+              secure: process.env.SMTP_PORT === "465",
+              auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+            },
+          },
+          {
+            resolve: "@medusajs/medusa/notification-local",
+            id: "local",
+            options: { name: "Local Notification Provider", channels: ["feed"] },
+          },
+        ],
+      },
+    },
+  ],
+})
+```
+
+**Gmail:** every email sent through a Gmail account stays in its Sent folder with the codes in it, and Gmail limits how many recipients an account can send to per day (a few hundred for a personal account). Use a dedicated sending account, not a personal one, with two-step verification turned on and an [app password](https://support.google.com/accounts/answer/185833) as `SMTP_PASS` (`smtp.gmail.com`, port 465).
+
+### Your own email
+
+The default email is in English. To write your own (your language, your branding), give the plugin a renderer. It receives the order (`id`, `display_id`, `email`) and its Vouchers (`code`, `pin`, `partner`, `face_value`, `currency_code`, `first_day`, `last_day`, `redemption_instructions`, `qr_code_cid`) and returns `{ subject, html, text }`, synchronously or as a promise. Refer to each QR code as `<img src="cid:${voucher.qr_code_cid}">` and keep the codes as text, so a blocked image never hides them.
+
+```ts
+{
+  resolve: "@khumkha/medusa-voucher",
+  options: {
+    encryptionKey: process.env.VOUCHER_ENCRYPTION_KEY,
+    delivery: {
+      renderers: {
+        email: ({ order, vouchers }) => ({
+          subject: `บัตรกำนัลของคุณ คำสั่งซื้อ #${order.display_id}`,
+          html: vouchers
+            .map((v) => `<p>${v.partner}: <b>${v.code}</b></p><img src="cid:${v.qr_code_cid}">`)
+            .join(""),
+          text: vouchers.map((v) => `${v.partner}: ${v.code}`).join("\n"),
+        }),
+      },
+    },
+  },
+}
+```
+
+Escape any value you put into the HTML yourself; the default email does.
 
 ## Importing vouchers
 
