@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 (Count a Voucher product's Pool by status); its link targets the page of ticket 03.
 
-**Status:** done (feature/voucher-admin-variant-widget)
+**Status:** done (PR #29)
 
 - [x] A variant can be marked with a Face value and currency; the store's default currency is preselected
 - [x] A marked variant shows its Face value, Available count and a link to its Voucher product page
