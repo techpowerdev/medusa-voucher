@@ -4,7 +4,7 @@ import QRCode from "qrcode"
 import { VOUCHER_MODULE } from "../../modules/voucher"
 import { DeliveryChannel } from "../../modules/voucher/constants"
 import VoucherModuleService from "../../modules/voucher/service"
-import { dayOf } from "../../modules/voucher/utils/timezone"
+import { dayOf, lastDayOf } from "../../modules/voucher/utils/timezone"
 import { errorMessage } from "../utils/error-message"
 import { renderVoucherEmail } from "../utils/render-voucher-email"
 
@@ -20,11 +20,6 @@ function safeError(error: unknown, secrets: string[]): string {
   const firstLine = errorMessage(error).split("\n")[0]
 
   return redact(typeof type === "string" ? `${type}: ${firstLine}` : firstLine, secrets)
-}
-
-// The last day a Voucher can be used: `valid_until` is the first instant it no longer applies.
-function lastDay(validUntil: Date, timeZone: string): string {
-  return dayOf(new Date(validUntil.getTime() - 1), timeZone)
 }
 
 // The Delivery this run claimed and tried, or null when the order has no Vouchers, another
@@ -108,7 +103,7 @@ export const sendOrderVouchersStep = createStep(
           face_value: Number(variant?.voucher_product?.face_value),
           currency_code: variant?.voucher_product?.currency_code ?? "",
           first_day: voucher.valid_from ? dayOf(new Date(voucher.valid_from), timezone) : null,
-          last_day: voucher.valid_until ? lastDay(new Date(voucher.valid_until), timezone) : null,
+          last_day: voucher.valid_until ? lastDayOf(new Date(voucher.valid_until), timezone) : null,
           redemption_instructions: voucher.batch?.redemption_instructions ?? null,
           qr_code_cid: `qr-${id}`,
         }

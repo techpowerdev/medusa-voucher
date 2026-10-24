@@ -33,13 +33,14 @@ The plugin adds admin pages in Medusa's dashboard. A widget on a product variant
 
 ## Implementation Decisions
 
-- **Counts (Available per GLOSSARY.md):** a Voucher counts as Available when its status is `available`, its Validity period has not ended, and it has at least the Minimum remaining validity counted from the later of now and its start, the same rule allocation uses to choose Vouchers. A Voucher whose status is `available` but whose Validity period has ended counts as Expired; one still valid but under the Minimum remaining validity counts apart under that name. Allocated, Delivered and Void follow the status. Counts are computed when read; no status is changed in the database (turning Vouchers Expired belongs with the expiring-soon alerts).
+- **Counts (Available per GLOSSARY.md):** a Voucher counts as Available when its status is `available`, its Validity period has not ended, and it has at least the Minimum remaining validity counted from the later of now and its start, the same rule allocation uses to choose Vouchers. A Voucher whose status is `available` but whose Validity period has ended counts as Expired; one still valid but under the Minimum remaining validity counts apart under that name. Allocated, Delivered and Void follow the status. Counts are computed when read, so they are right between runs of the job below; under the Minimum remaining validity is never stored, since it depends on an option the store can change.
+- **Turning Vouchers Expired:** a scheduled job marks `available` Vouchers whose Validity period has ended as `expired` (GLOSSARY.md's Expired; an ended Validity period never comes back). Allocated and Delivered Vouchers keep their status. It cannot race allocation, which only takes Vouchers whose Validity period has not ended.
 - **`GET /admin/voucher-products`:** `available_vouchers` changes to the Available count above. The README states the change.
 - **`GET /admin/voucher-products/:id`:** returns the Voucher product with its variant, the Medusa product's title and the counts above.
 - **`GET /admin/voucher-products/:id/batches`:** the Voucher product's batches, newest purchase first, each with purchase date, unit cost, reference, Redemption instructions and counts by status, paginated.
-- **`GET /admin/voucher-products/:id/vouchers`:** the Voucher product's Vouchers, each with id, status, batch (id and reference), first and last usable day in the plugin's `timezone` (null when that end is open), and for an allocated or delivered one the order's id and display number; filterable by status (including Expired and under minimum) and by batch; ordered by valid-until, soonest first and open-ended last; 20 per page by default.
+- **`GET /admin/voucher-products/:id/vouchers`:** the Voucher product's Vouchers, each with id, status as counted above (`available`, `expired`, `under_minimum`, `allocated`, `delivered`, `void`), `code_hint` (the code's last characters, kept at import to be shown masked; never the code), batch (id and reference), first and last usable day in the plugin's `timezone` (null when that end is open), and for an allocated or delivered one the order's id and display number; filterable by status (including Expired and under minimum) and by batch; ordered by valid-until, soonest first and open-ended last; 20 per page by default.
 - **Import:** the dialog posts to the existing `POST /admin/voucher-batches/import` unchanged; the file is read in the browser and sent as the `csv` text. The browser counts the file's data rows for display and shows no row's content. Problems come back from the API with line numbers and never codes. The 50,000-row limit stays.
-- **Secrets:** no new response or page contains a code, PIN or hash; codes stay readable only through `revealVoucher`.
+- **Secrets:** no new response or page contains a code, PIN or hash, only `code_hint`, shown masked; codes stay readable only through `revealVoucher`.
 - **Variant widget:** shown on the product variant page. For a variant that is not a Voucher product it offers to mark it (Face value, currency defaulting to the store's default currency) through `POST /admin/voucher-products`. For one that is, it shows the Face value, the Available count and a link to the Voucher product's page, and allows changing the Face value or currency through `POST /admin/voucher-products/:id` only while it has no Vouchers. No way to unmark in this spec.
 - **Vouchers page:** a route in the admin sidebar listing Voucher products with Partner (product title), variant title, Face value, Available, Expired, under Minimum remaining validity, Allocated and Delivered, ordered by product title. No create button; marking happens on the variant's page.
 - **Language:** every label goes through the admin i18n in English and Thai.
@@ -53,12 +54,12 @@ The plugin adds admin pages in Medusa's dashboard. A widget on a product variant
 ## Out of Scope
 
 - Allocation failures in the admin (list, retry, resolve); the API exists and pages come later.
-- Low stock and expiring-soon alerts, and turning Vouchers Expired in the database.
+- Low stock and expiring-soon alerts.
 - Showing or revealing a code or PIN in the admin.
 - Unmarking a Voucher product, voiding a Voucher, Replacement.
 - Editing or deleting a Voucher batch.
 
 ## Further Notes
 
-- Decided with the owner on 2026-10-24 (grilling Q1–Q15).
+- Decided with the owner on 2026-10-24 (grilling Q1–Q15). Added with ticket 02: `code_hint` is shown, list statuses are the counted ones, and Vouchers are turned Expired by a job (ticket 06, before ticket 03).
 - **Finding:** nothing in the plugin sets a Voucher's status to `expired`; allocation skips expired and under-minimum Vouchers while choosing, which is why counts are computed when read.
