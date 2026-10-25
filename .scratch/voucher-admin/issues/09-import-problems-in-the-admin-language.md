@@ -4,7 +4,7 @@
 
 **Blocked by:** none (follows 04).
 
-**Status:** ready-for-agent
+**Status:** done (PR #34)
 
 - [x] A refused import returns the same `message` as before plus the problems with line numbers and codes, and no Voucher code or PIN, tested through the admin route against a real database
 - [x] Every problem the CSV parser reports has a code, tested at the parser
