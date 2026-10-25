@@ -4,7 +4,7 @@
 
 **Blocked by:** none (follows 03 and 04).
 
-**Status:** ready-for-agent
+**Status:** done (PR #33)
 
 - [x] Each batch in the batches list has `purchased_day` in the plugin's time zone, tested through the admin route against a real database, including an instant near midnight that falls on a different day in UTC
 - [ ] The Voucher product page and the batch filter show `purchased_day`
