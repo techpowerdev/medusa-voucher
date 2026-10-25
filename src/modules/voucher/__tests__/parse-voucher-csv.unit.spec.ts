@@ -101,6 +101,60 @@ describe("parseVoucherCsv", () => {
   })
 })
 
+describe("parseVoucherCsv problem codes", () => {
+  it("codes a row that is not valid CSV", () => {
+    expect(parse("code,pin\nAAAA,1,extra").errors).toEqual([
+      expect.objectContaining({ line: 2, code: "invalid_csv_row" }),
+    ])
+  })
+
+  it("codes a file without voucher rows", () => {
+    expect(parse("code,pin\n").errors).toEqual([
+      expect.objectContaining({ line: 1, code: "no_rows" }),
+    ])
+  })
+
+  it("codes a header without a code column", () => {
+    expect(parse("pin\n1234").errors).toEqual([
+      expect.objectContaining({ line: 1, code: "missing_code_column" }),
+    ])
+  })
+
+  it("codes each unknown column with its name", () => {
+    expect(parse("code,colour,size\nAAAA,red,L").errors).toEqual([
+      expect.objectContaining({ line: 1, code: "unknown_column", column: "colour" }),
+      expect.objectContaining({ line: 1, code: "unknown_column", column: "size" }),
+    ])
+  })
+
+  it("codes a file over the row limit with the limit", () => {
+    const rows = Array.from({ length: 50001 }, (_, index) => `CODE-${index}`)
+
+    expect(parse(["code", ...rows].join("\n")).errors).toEqual([
+      expect.objectContaining({ line: 1, code: "too_many_rows", max: 50000 }),
+    ])
+  })
+
+  it("codes an empty code", () => {
+    expect(parse("code,pin\nAAAA,1\n,1234").errors).toEqual([
+      expect.objectContaining({ line: 3, code: "empty_code" }),
+    ])
+  })
+
+  it("codes a date that is not a calendar date with its column", () => {
+    expect(parse("code,valid_from,valid_until\nAAAA,2026/01/01,2026-02-30").errors).toEqual([
+      expect.objectContaining({ line: 2, code: "invalid_date", column: "valid_from" }),
+      expect.objectContaining({ line: 2, code: "invalid_date", column: "valid_until" }),
+    ])
+  })
+
+  it("codes a validity period that ends before it starts", () => {
+    expect(parse("code,valid_from,valid_until\nAAAA,2026-06-01,2026-01-01").errors).toEqual([
+      expect.objectContaining({ line: 2, code: "period_ends_before_start" }),
+    ])
+  })
+})
+
 describe("time zones", () => {
   it("finds the start of a day in zones ahead of and behind UTC, with daylight saving", () => {
     expect(startOfDay(2026, 1, 1, "Asia/Bangkok")).toEqual(new Date("2025-12-31T17:00:00.000Z"))

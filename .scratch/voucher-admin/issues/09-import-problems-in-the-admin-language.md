@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] A refused import returns the same `message` as before plus the problems with line numbers and codes, and no Voucher code or PIN, tested through the admin route against a real database
-- [ ] Every problem the CSV parser reports has a code, tested at the parser
-- [ ] The import dialog shows each problem in English or Thai, and the message alone for any other error
-- [ ] README lists the problem codes
-- [ ] Checked on a real screen in the dev app with screenshots (rule 13)
+- [x] A refused import returns the same `message` as before plus the problems with line numbers and codes, and no Voucher code or PIN, tested through the admin route against a real database
+- [x] Every problem the CSV parser reports has a code, tested at the parser
+- [x] The import dialog shows each problem in English or Thai, and the message alone for any other error
+- [x] README lists the problem codes
+- [x] Checked on a real screen in the dev app with screenshots (rule 13)

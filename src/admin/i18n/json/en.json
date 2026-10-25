@@ -49,7 +49,20 @@
     "tooManyRows": "The file has {{rows}} rows; at most {{max}} can be imported at once.",
     "submit": "Import",
     "success": "Imported {{imported}} Vouchers",
-    "failed": "Nothing was imported"
+    "failed": "Nothing was imported",
+    "problems": {
+      "invalid_csv_row": "Line {{line}}: the row is not valid CSV or has a different number of columns than the header",
+      "no_rows": "The file has no Voucher rows",
+      "missing_code_column": "Line {{line}}: the header must have a \"code\" column",
+      "unknown_column": "Line {{line}}: unknown column \"{{column}}\"",
+      "too_many_rows": "The file has more than {{max}} Vouchers; split it into several batches",
+      "empty_code": "Line {{line}}: the code is empty",
+      "invalid_date": "Line {{line}}: {{column}} must be a date as YYYY-MM-DD or DD-MM-YYYY",
+      "period_ends_before_start": "Line {{line}}: valid_until is before valid_from",
+      "code_repeated_in_file": "Line {{line}}: the code repeats an earlier line of the file",
+      "code_already_stored": "Line {{line}}: the code is already stored"
+    },
+    "moreProblems": "and {{more}} more"
   },
   "widget": {
     "title": "Voucher product",

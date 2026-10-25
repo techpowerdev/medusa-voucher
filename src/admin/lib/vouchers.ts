@@ -1,5 +1,6 @@
 import type { PoolCounts, PoolStatus } from "../../modules/voucher/types"
-import { sdk } from "./client"
+import { backendUrl, sdk } from "./client"
+import type { ImportFailure, ImportProblem } from "./import-problems"
 
 export { POOL_STATUSES } from "../../modules/voucher/types"
 export type { PoolCounts, PoolStatus }
@@ -91,11 +92,39 @@ export type ImportVoucherBatchBody = {
   csv: string
 }
 
-export const importVoucherBatch = (body: ImportVoucherBatchBody) =>
-  sdk.client.fetch<{ voucher_batch: { id: string }; imported: number }>("/admin/voucher-batches/import", {
+// A refused import, with the problems the response lists.
+export class ImportVoucherBatchError extends Error implements ImportFailure {
+  constructor(
+    message: string,
+    readonly problems?: ImportProblem[],
+    readonly problem_count?: number
+  ) {
+    super(message)
+  }
+}
+
+// The sdk keeps only the message of an error response, so this request goes through the
+// browser's fetch to read the problems of a refused file. It sends what the sdk would: the
+// same base URL, the session cookie and JSON headers.
+export const importVoucherBatch = async (body: ImportVoucherBatchBody) => {
+  const response = await fetch(`${backendUrl.replace(/\/$/, "")}/admin/voucher-batches/import`, {
     method: "POST",
-    body,
+    credentials: "include",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+      ...(sdk.client.locale ? { "x-medusa-locale": sdk.client.locale } : {}),
+    },
+    body: JSON.stringify(body),
   })
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new ImportVoucherBatchError(data.message ?? response.statusText, data.problems, data.problem_count)
+  }
+
+  return data as { voucher_batch: { id: string }; imported: number }
+}
 
 // The import refuses a file with more rows than this: MAX_CSV_VOUCHERS, kept here so the admin
 // bundle does not take in the server's CSV parser.

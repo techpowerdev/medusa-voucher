@@ -221,6 +221,37 @@ BBBB-3333-4444,1234,,
 
 `valid_from` and `valid_until` are dates only, as `YYYY-MM-DD` or `DD-MM-YYYY`, and each counts as the whole of that day in the plugin's `timezone` option (an IANA zone, `Asia/Bangkok` by default): a voucher is valid from 00:00 on its `valid_from` date through the end of its `valid_until` date. A time, a two-digit year or a date that does not exist is rejected. Internally the period is stored as instants, `valid_from <= now < valid_until`, like Medusa's own campaigns, with `valid_until` set to 00:00 of the day after the date given. A file is imported whole or not at all: any problem (a bad date, an empty code, a code repeated in the file or already stored) rejects it with the line numbers concerned, and never the codes themselves. A file may hold up to 50,000 vouchers.
 
+A refused file is answered with 400 and a body that adds the problems to the error's message:
+
+```json
+{
+  "type": "invalid_data",
+  "message": "The CSV has 2 problem(s), nothing was imported. line 2: valid_from must be a date as YYYY-MM-DD or DD-MM-YYYY; line 3: The code is empty",
+  "problems": [
+    { "line": 2, "code": "invalid_date", "column": "valid_from" },
+    { "line": 3, "code": "empty_code" }
+  ],
+  "problem_count": 2
+}
+```
+
+`problems` lists the first 20 problems and `problem_count` counts them all. Each has its `line` in the file (1 is the header) and one of these stable codes, which the admin translates:
+
+| `code` | Problem |
+| --- | --- |
+| `invalid_csv_row` | The row is not valid CSV or has a different number of columns than the header |
+| `no_rows` | The file has no voucher rows |
+| `missing_code_column` | The header has no `code` column |
+| `unknown_column` | The header has a column the import does not know, named in `column` |
+| `too_many_rows` | The file has more vouchers than `max` (50,000) |
+| `empty_code` | The row's code is empty |
+| `invalid_date` | The date in `column` (`valid_from` or `valid_until`) is not a calendar date as `YYYY-MM-DD` or `DD-MM-YYYY` |
+| `period_ends_before_start` | `valid_until` is before `valid_from` |
+| `code_repeated_in_file` | The code repeats an earlier line of the file (each later line is listed) |
+| `code_already_stored` | The code is already stored |
+
+No problem carries a code or PIN. Any other error, including two imports storing the same code at the same moment, has the message alone.
+
 ## Development
 
 This repository uses pnpm (see `AGENTS.md` for all commands).

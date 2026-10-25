@@ -1,4 +1,5 @@
 import { CsvError, parse } from "csv-parse/sync"
+import { VoucherImportProblemCode } from "../constants"
 import { VoucherCodeInput } from "../types"
 import { startOfDay } from "./timezone"
 
@@ -8,7 +9,12 @@ const COLUMNS = ["code", "pin", "valid_from", "valid_until"] as const
 
 export type CsvRowError = {
   line: number
+  code: VoucherImportProblemCode
   message: string
+  // The column a problem is about, named as in the header.
+  column?: string
+  // The most rows a file may have, for a file over it.
+  max?: number
 }
 
 export type ParsedVoucherCsv = {
@@ -16,8 +22,11 @@ export type ParsedVoucherCsv = {
   errors: CsvRowError[]
 }
 
-const DATE_HINT = (column: string) =>
-  `${column} must be a date as YYYY-MM-DD or DD-MM-YYYY`
+const invalidDate = (column: string) => ({
+  code: VoucherImportProblemCode.INVALID_DATE,
+  column,
+  message: `${column} must be a date as YYYY-MM-DD or DD-MM-YYYY`,
+})
 
 export const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
 const DAY_FIRST_DATE = /^(\d{2})-(\d{2})-(\d{4})$/
@@ -76,6 +85,7 @@ export function parseVoucherCsv(content: string, timeZone: string): ParsedVouche
         errors: [
           {
             line: Number(error.lines) || 1,
+            code: VoucherImportProblemCode.INVALID_CSV_ROW,
             message: "The row is not valid CSV or has a different number of columns than the header",
           },
         ],
@@ -86,18 +96,32 @@ export function parseVoucherCsv(content: string, timeZone: string): ParsedVouche
   }
 
   if (!records.length) {
-    return { vouchers: [], errors: [{ line: 1, message: "The file has no voucher rows" }] }
+    return {
+      vouchers: [],
+      errors: [
+        { line: 1, code: VoucherImportProblemCode.NO_ROWS, message: "The file has no voucher rows" },
+      ],
+    }
   }
 
   const header = Object.keys(records[0].record)
 
   if (!header.includes("code")) {
-    errors.push({ line: 1, message: 'The header must have a "code" column' })
+    errors.push({
+      line: 1,
+      code: VoucherImportProblemCode.MISSING_CODE_COLUMN,
+      message: 'The header must have a "code" column',
+    })
   }
 
   for (const name of header) {
     if (!(COLUMNS as readonly string[]).includes(name)) {
-      errors.push({ line: 1, message: `Unknown column "${name}"` })
+      errors.push({
+        line: 1,
+        code: VoucherImportProblemCode.UNKNOWN_COLUMN,
+        column: name,
+        message: `Unknown column "${name}"`,
+      })
     }
   }
 
@@ -111,6 +135,8 @@ export function parseVoucherCsv(content: string, timeZone: string): ParsedVouche
       errors: [
         {
           line: 1,
+          code: VoucherImportProblemCode.TOO_MANY_ROWS,
+          max: MAX_CSV_VOUCHERS,
           message: `The file has more than ${MAX_CSV_VOUCHERS} vouchers; split it into several batches`,
         },
       ],
@@ -119,21 +145,21 @@ export function parseVoucherCsv(content: string, timeZone: string): ParsedVouche
 
   for (const { record, info } of records) {
     const line = info.lines
-    const rowErrors: string[] = []
+    const rowErrors: Omit<CsvRowError, "line">[] = []
 
     if (!record.code) {
-      rowErrors.push("The code is empty")
+      rowErrors.push({ code: VoucherImportProblemCode.EMPTY_CODE, message: "The code is empty" })
     }
 
     const from = record.valid_from ? parseCalendarDate(record.valid_from) : null
     const until = record.valid_until ? parseCalendarDate(record.valid_until) : null
 
     if (record.valid_from && !from) {
-      rowErrors.push(DATE_HINT("valid_from"))
+      rowErrors.push(invalidDate("valid_from"))
     }
 
     if (record.valid_until && !until) {
-      rowErrors.push(DATE_HINT("valid_until"))
+      rowErrors.push(invalidDate("valid_until"))
     }
 
     const valid_from = from ? startOfDay(from[0], from[1], from[2], timeZone) : null
@@ -141,11 +167,14 @@ export function parseVoucherCsv(content: string, timeZone: string): ParsedVouche
     const valid_until = until ? startOfDay(until[0], until[1], until[2] + 1, timeZone) : null
 
     if (valid_from && valid_until && valid_until <= valid_from) {
-      rowErrors.push("valid_until is before valid_from")
+      rowErrors.push({
+        code: VoucherImportProblemCode.PERIOD_ENDS_BEFORE_START,
+        message: "valid_until is before valid_from",
+      })
     }
 
     if (rowErrors.length) {
-      rowErrors.forEach((message) => errors.push({ line, message }))
+      rowErrors.forEach((problem) => errors.push({ line, ...problem }))
       continue
     }
 
