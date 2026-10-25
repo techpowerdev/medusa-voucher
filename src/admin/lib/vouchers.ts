@@ -18,6 +18,8 @@ export type VoucherProduct = {
 export type VoucherBatch = {
   id: string
   purchased_at: string
+  // The calendar day of `purchased_at` in the plugin's time zone, as YYYY-MM-DD.
+  purchased_day: string
   unit_cost: number | null
   reference: string | null
   redemption_instructions: string | null

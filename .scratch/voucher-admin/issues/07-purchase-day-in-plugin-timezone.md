@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Each batch in the batches list has `purchased_day` in the plugin's time zone, tested through the admin route against a real database, including an instant near midnight that falls on a different day in UTC
+- [x] Each batch in the batches list has `purchased_day` in the plugin's time zone, tested through the admin route against a real database, including an instant near midnight that falls on a different day in UTC
 - [ ] The Voucher product page and the batch filter show `purchased_day`
-- [ ] The import dialog stores the chosen day as that day's start in the plugin's time zone
-- [ ] Checked on a real screen in the dev app with screenshots (rule 13)
+- [x] The import dialog stores the chosen day as that day's start in the plugin's time zone
+- [x] Checked on a real screen in the dev app with screenshots (rule 13)

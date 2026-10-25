@@ -34,8 +34,8 @@ import {
   VoucherEmailRenderer,
   VoucherModuleOptions,
 } from "./types"
-import { parseVoucherCsv } from "./utils/parse-voucher-csv"
-import { dayOf, DEFAULT_TIMEZONE, lastDayOf } from "./utils/timezone"
+import { parseCalendarDate, parseVoucherCsv } from "./utils/parse-voucher-csv"
+import { dayOf, DEFAULT_TIMEZONE, lastDayOf, startOfDay } from "./utils/timezone"
 import {
   codeHint,
   createVoucherCrypto,
@@ -137,6 +137,28 @@ class VoucherModuleService extends MedusaService({
       timezone: this.timezone_,
       renderers: { email: this.emailRenderer_ },
     }
+  }
+
+  /** The IANA time zone (the `timezone` option) in which the plugin counts calendar days. */
+  async getTimezone() {
+    return this.timezone_
+  }
+
+  /**
+   * The instant at which a calendar day given as `YYYY-MM-DD` starts in the configured time
+   * zone. A day that is not on the calendar (2026-02-30) is refused rather than rolled over.
+   */
+  async startOfCalendarDay(day: string) {
+    const parts = parseCalendarDate(day)
+
+    if (!parts) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        `${JSON.stringify(day)} is not a day on the calendar as YYYY-MM-DD`
+      )
+    }
+
+    return startOfDay(parts[0], parts[1], parts[2], this.timezone_)
   }
 
   /** Reads a vouchers CSV, turning its dates into whole days in the configured time zone. */

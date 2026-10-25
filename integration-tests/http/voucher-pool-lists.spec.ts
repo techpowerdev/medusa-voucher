@@ -103,6 +103,24 @@ medusaIntegrationTestRunner({
           noSecrets(response.data)
         })
 
+        it("gives each batch its purchase day in the plugin's time zone", async () => {
+          const product = await createVoucherProductVariant(getContainer(), "100")
+          // 00:30 on 1 October in Bangkok (UTC+7), still 30 September in UTC.
+          await stockVouchers(getContainer(), product, [{ code: "LISTS-DAY-0001-FFFF" }], {
+            purchased_at: new Date("2026-09-30T17:30:00Z"),
+          })
+
+          const response = await get(`/admin/voucher-products/${product.voucherProductId}/batches`)
+
+          expect(response.status).toBe(200)
+          expect(response.data.batches).toEqual([
+            expect.objectContaining({
+              purchased_at: "2026-09-30T17:30:00.000Z",
+              purchased_day: "2026-10-01",
+            }),
+          ])
+        })
+
         it("reads batches a page at a time", async () => {
           const { product } = await twoBatches()
 

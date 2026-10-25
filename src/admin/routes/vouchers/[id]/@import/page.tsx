@@ -45,6 +45,15 @@ const today = () => {
   return day
 }
 
+// The day chosen in the picker as YYYY-MM-DD, read where the admin is. The API stores the
+// start of that day in the plugin's time zone, so the batch shows this day everywhere.
+const calendarDay = (date: Date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-")
+
 const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
   const { t, i18n } = useTranslation(VOUCHER_NS)
   const { t: tDashboard } = useTranslation()
@@ -119,7 +128,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
     await mutateAsync(
       {
         voucher_product_id: voucherProductId,
-        purchased_at: data.purchased_at.toISOString(),
+        purchased_at: calendarDay(data.purchased_at),
         unit_cost: data.unit_cost ? parseFloat(data.unit_cost) : null,
         reference: data.reference || null,
         redemption_instructions: data.redemption_instructions || null,

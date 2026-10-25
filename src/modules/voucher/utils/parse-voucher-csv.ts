@@ -19,13 +19,13 @@ export type ParsedVoucherCsv = {
 const DATE_HINT = (column: string) =>
   `${column} must be a date as YYYY-MM-DD or DD-MM-YYYY`
 
-const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
+export const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
 const DAY_FIRST_DATE = /^(\d{2})-(\d{2})-(\d{4})$/
 
 // Reads YYYY-MM-DD or DD-MM-YYYY as a real calendar date. JavaScript would roll a day
 // that does not exist (2026-02-30) over to the next month, silently moving an expiry, so
 // the date is checked by building it back.
-function parseCalendarDate(value: string): [number, number, number] | null {
+export function parseCalendarDate(value: string): [number, number, number] | null {
   const iso = ISO_DATE.exec(value)
   const dayFirst = DAY_FIRST_DATE.exec(value)
 
