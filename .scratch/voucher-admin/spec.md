@@ -63,3 +63,4 @@ The plugin adds admin pages in Medusa's dashboard. A widget on a product variant
 
 - Decided with the owner on 2026-10-24 (grilling Q1–Q15). Added with ticket 02: `code_hint` is shown, list statuses are the counted ones, and Vouchers are turned Expired by a job (ticket 06, before ticket 03).
 - **Finding:** nothing in the plugin sets a Voucher's status to `expired`; allocation skips expired and under-minimum Vouchers while choosing, which is why counts are computed when read.
+- Follow-ups agreed with the owner on 2026-10-25 after tickets 01–06: ticket 08 (type-check the admin in CI) first, then 07 (a batch's purchase date in the plugin's time zone) and 09 (import problems in the admin's language, keeping the error message as it is).
