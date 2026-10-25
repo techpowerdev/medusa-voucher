@@ -4,8 +4,8 @@
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** done (PR #32)
 
 - [x] `pnpm typecheck` fails on a type error in `src/admin` (shown with a deliberate error, then removed)
-- [ ] CI runs it through the existing `pnpm typecheck` step
+- [x] CI runs it through the existing `pnpm typecheck` step
 - [x] AGENTS.md's Commands and Known pitfalls say so
