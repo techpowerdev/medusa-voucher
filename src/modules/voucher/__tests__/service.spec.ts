@@ -34,6 +34,9 @@ const voucherInput = (n: number, batch_id: string) => ({
 
 moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
+  // Unset, the runner names the database after the module, so two checkouts running these
+  // tests at once would rebuild each other's tables; give each checkout its own name.
+  dbName: process.env.VOUCHER_TEST_DB_NAME,
   moduleModels: [
     Voucher,
     VoucherBatch,
