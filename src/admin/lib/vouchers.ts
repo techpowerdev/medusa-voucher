@@ -31,7 +31,7 @@ export type PoolVoucher = {
   id: string
   status: PoolStatus
   code_hint: string
-  batch: { id: string; reference: string | null }
+  batch: { id: string; reference: string | null; purchased_day: string }
   first_day: string | null
   last_day: string | null
   order: { id: string; display_id: number } | null

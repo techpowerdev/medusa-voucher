@@ -1,6 +1,6 @@
 {
   "name": "@khumkha/medusa-voucher",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Medusa v2 plugin for creating, managing and redeeming vouchers.",
   "author": "kuson <techpowerdevpro@gmail.com>",
   "repository": {
