@@ -153,7 +153,8 @@ export type PoolVoucher = {
   id: string
   status: PoolStatus
   code_hint: string
-  batch: { id: string; reference: string | null }
+  // `purchased_day` is the batch's purchase day (`YYYY-MM-DD`) in the store's timezone.
+  batch: { id: string; reference: string | null; purchased_day: string }
   // Whole days (`YYYY-MM-DD`) in the store's timezone; null when that end is open.
   first_day: string | null
   last_day: string | null

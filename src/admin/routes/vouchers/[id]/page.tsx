@@ -10,7 +10,7 @@ import {
   Text,
 } from "@medusajs/ui"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, Outlet, UIMatch, useParams } from "react-router-dom"
 import {
@@ -163,6 +163,12 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
       }),
     placeholderData: keepPreviousData,
   })
+  // A batch is named by its reference, or by its purchase day when it has none.
+  const batchLabel = useCallback(
+    (batch: { reference: string | null; purchased_day: string }) =>
+      batch.reference ?? getFullDate({ date: localDay(batch.purchased_day) }),
+    [getFullDate]
+  )
   const { data: batchOptions } = useQuery({
     queryKey: ["voucher-batch-options", voucherProduct.id],
     queryFn: () => listVoucherBatches(voucherProduct.id, { limit: BATCH_FILTER_SIZE, offset: 0 }),
@@ -182,12 +188,12 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         type: "radio",
         label: t("detail.batch"),
         options: (batchOptions?.batches ?? []).map((batch) => ({
-          label: batch.reference ?? getFullDate({ date: localDay(batch.purchased_day) }),
+          label: batchLabel(batch),
           value: batch.id,
         })),
       }),
     ],
-    [t, getFullDate, batchOptions]
+    [t, batchLabel, batchOptions]
   )
 
   const columns = useMemo(
@@ -205,7 +211,7 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
       }),
       voucherColumns.accessor("batch", {
         header: t("detail.batch"),
-        cell: ({ getValue }) => getValue().reference ?? "-",
+        cell: ({ getValue }) => batchLabel(getValue()),
       }),
       voucherColumns.accessor("first_day", {
         header: t("detail.firstDay"),
@@ -238,7 +244,7 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         },
       }),
     ],
-    [t, getFullDate]
+    [t, getFullDate, batchLabel]
   )
 
   if (isError) {
