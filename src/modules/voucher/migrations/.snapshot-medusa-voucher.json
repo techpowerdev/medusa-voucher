@@ -218,47 +218,47 @@
           "mappedType": "datetime"
         }
       },
-      "name": "allocation_failure",
+      "name": "voucher_allocation_failure",
       "schema": "public",
       "indexes": [
         {
-          "keyName": "IDX_allocation_failure_deleted_at",
+          "keyName": "IDX_voucher_allocation_failure_deleted_at",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_allocation_failure_deleted_at\" ON \"allocation_failure\" (\"deleted_at\") WHERE deleted_at IS NULL"
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_allocation_failure_deleted_at\" ON \"voucher_allocation_failure\" (\"deleted_at\") WHERE deleted_at IS NULL"
         },
         {
-          "keyName": "IDX_allocation_failure_order_id",
+          "keyName": "IDX_voucher_allocation_failure_order_id",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_allocation_failure_order_id\" ON \"allocation_failure\" (\"order_id\") WHERE deleted_at IS NULL"
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_allocation_failure_order_id\" ON \"voucher_allocation_failure\" (\"order_id\") WHERE deleted_at IS NULL"
         },
         {
-          "keyName": "IDX_allocation_failure_status",
+          "keyName": "IDX_voucher_allocation_failure_status",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_allocation_failure_status\" ON \"allocation_failure\" (\"status\") WHERE deleted_at IS NULL"
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_voucher_allocation_failure_status\" ON \"voucher_allocation_failure\" (\"status\") WHERE deleted_at IS NULL"
         },
         {
-          "keyName": "IDX_allocation_failure_order_line_item_id_unique",
+          "keyName": "IDX_voucher_allocation_failure_order_line_item_id_unique",
           "columnNames": [],
           "composite": false,
           "constraint": false,
           "primary": false,
           "unique": false,
-          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_allocation_failure_order_line_item_id_unique\" ON \"allocation_failure\" (\"order_line_item_id\") WHERE deleted_at IS NULL AND status = 'open'"
+          "expression": "CREATE UNIQUE INDEX IF NOT EXISTS \"IDX_voucher_allocation_failure_order_line_item_id_unique\" ON \"voucher_allocation_failure\" (\"order_line_item_id\") WHERE deleted_at IS NULL AND status = 'open'"
         },
         {
-          "keyName": "allocation_failure_pkey",
+          "keyName": "voucher_allocation_failure_pkey",
           "columnNames": [
             "id"
           ],

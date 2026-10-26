@@ -100,8 +100,8 @@ medusaIntegrationTestRunner({
 
         it("leaves an order whose failure was resolved alone", async () => {
           const order = await failedThenRestocked()
-          const [failure] = await service().listAllocationFailures({ order_id: order.id })
-          await service().updateAllocationFailures({
+          const [failure] = await service().listVoucherAllocationFailures({ order_id: order.id })
+          await service().updateVoucherAllocationFailures({
             id: failure.id,
             status: AllocationFailureStatus.RESOLVED,
             resolved_at: new Date(),
@@ -146,7 +146,7 @@ medusaIntegrationTestRunner({
         await recoverAt(11 * MINUTE)
 
         expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-        expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
       describe("reporting", () => {

@@ -16,8 +16,8 @@ export type RetryAllocationFailuresResult = {
 // first, through the trigger workflow so the Paid order rule applies. Allocation is all or
 // none per order, and a successful one resolves the order's failures. An order whose
 // allocation throws is logged and reported as failed, and the later orders are still tried.
-export const retryOrdersWaitingOnFailuresStep = createStep(
-  "retry-orders-waiting-on-failures",
+export const retryVoucherAllocationFailuresStep = createStep(
+  "retry-voucher-allocation-failures",
   async (input: { voucher_product_id: string }, { container }) => {
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -38,7 +38,7 @@ export const retryOrdersWaitingOnFailuresStep = createStep(
     }
 
     const failures = variantId
-      ? await service.listAllocationFailures(
+      ? await service.listVoucherAllocationFailures(
           { variant_id: variantId, status: AllocationFailureStatus.OPEN },
           { select: ["order_id"], order: { created_at: "ASC", id: "ASC" } }
         )

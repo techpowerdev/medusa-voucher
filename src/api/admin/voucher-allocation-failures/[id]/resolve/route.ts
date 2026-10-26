@@ -14,5 +14,5 @@ export const POST = async (
     },
   })
 
-  res.json({ allocation_failure: result })
+  res.json({ voucher_allocation_failure: result })
 }
