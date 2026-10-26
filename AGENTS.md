@@ -13,7 +13,7 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
 - `pnpm build` — `medusa plugin:build` (output in `.medusa/server`, git-ignored)
 - `pnpm dev` — `medusa plugin:develop` (watch + push to the local registry; run the host app's dev server in another terminal)
 - `pnpm lint` — `medusa lint`
-- `pnpm typecheck` — type-check `src/` **including tests** (`tsconfig.json` excludes tests and Jest runs through SWC, which does not check types)
+- `pnpm typecheck` — type-check `src/` **including tests** (`tsconfig.json` excludes tests and Jest runs through SWC, which does not check types), then `src/admin` with its own `src/admin/tsconfig.json` (browser types and JSX); CI runs it
 - `pnpm test:unit` — unit tests, `src/**/__tests__/**/*.unit.spec.ts` (no database)
 - `pnpm test:integration:modules` — module integration tests, `src/modules/*/__tests__/` (needs PostgreSQL)
 - `pnpm test:integration:http` — builds the plugin, then runs `integration-tests/http/*.spec.ts` against a real Medusa app that loads the plugin from `.medusa/server` (needs PostgreSQL and generated migrations)
@@ -96,7 +96,7 @@ Each of these cost time here. All were checked against Medusa 2.21.2 or Node; re
 - **Links:** to know whether a variant has a Voucher product, query `product_variant` with `voucher_product.id`; a nested array filter on the link returned nothing.
 - **Services:** public service methods must be `async`; a method taking a `Context` needs `@InjectManager()` / `@InjectTransactionManager()` and `@MedusaContext()`, as Medusa's own modules do.
 - **Migrations:** see rule 3. A second `db:generate` reporting nothing does not prove the migrations are complete; the HTTP tests, which build the database from them, do.
-- **Admin build:** `translationNs` in `defineRouteConfig` must be a string literal: the admin build reads it from the source, and with a constant the sidebar shows the raw key. Plugin translations are `{ en: { "<namespace>": {...} }, th: {...} }` in `src/admin/i18n/index.ts`. `pnpm typecheck` excludes `src/admin`; check it with `npx tsc -p src/admin/tsconfig.json`. The dashboard's `DataTable` shows a search box unless `enableSearch={false}`, and stores each filter in the URL as JSON, `null` while it has no value yet.
+- **Admin build:** `translationNs` in `defineRouteConfig` must be a string literal: the admin build reads it from the source, and with a constant the sidebar shows the raw key. Plugin translations are `{ en: { "<namespace>": {...} }, th: {...} }` in `src/admin/i18n/index.ts`. The dashboard's `DataTable` shows a search box unless `enableSearch={false}`, and stores each filter in the URL as JSON, `null` while it has no value yet.
 - **Dev host admin:** after `plugin:add`, Vite keeps serving the old plugin admin from `apps/backend/node_modules/.vite`. Stop the backend, delete that folder, start it again and hard-reload the browser. A restart also ends the admin session. The admin's language follows the user's profile (Settings → Profile), not the browser's `lng` key.
 
 ## Layout
