@@ -6,7 +6,7 @@
 
 **Blocked by:** none.
 
-**Status:** in progress
+**Status:** done (PR #49)
 
 - [x] Each Voucher's `batch` in `GET /admin/voucher-products/:id/vouchers` has `purchased_day` in the plugin's time zone (HTTP integration test, written first)
 - [x] The Batch column shows the reference, or the purchase day when the batch has none, matching the batch filter's label
