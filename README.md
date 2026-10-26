@@ -19,10 +19,14 @@ Requires `@medusajs/medusa` >= 2.21.2 and Node `^20.19.0 || >=22.12.0` (`.nvmrc`
 
 ## Installation
 
+The plugin is not published to npm yet. Each [GitHub Release](https://github.com/techpowerdev/medusa-voucher/releases) carries the built package as a `.tgz` file; install it by its URL (replace both version numbers with the release you want):
+
 ```bash
-npm install @khumkha/medusa-voucher
-# or: yarn add / pnpm add @khumkha/medusa-voucher
+npm install https://github.com/techpowerdev/medusa-voucher/releases/download/v0.1.0/khumkha-medusa-voucher-0.1.0.tgz
+# or: yarn add / pnpm add with the same URL
 ```
+
+Installing from the repository itself (`github:techpowerdev/medusa-voucher`) does not work: the built code in `.medusa/server` is not committed, so the package would have no code.
 
 Register it in `medusa-config.ts`:
 
