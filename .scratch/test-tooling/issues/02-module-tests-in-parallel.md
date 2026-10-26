@@ -6,8 +6,8 @@
 
 **Blocked by:** none.
 
-**Status:** needs-triage
+**Status:** done (PR #41, merged into develop by #42)
 
-- [ ] Two module test runs with different values of the variable, started at the same time, both pass (shown in the PR)
-- [ ] Without the variable, the database name and CI behaviour are unchanged
-- [ ] AGENTS.md (Environment) says how to run module tests in parallel checkouts
+- [x] Two module test runs with different values of the variable, started at the same time, both pass (shown in the PR)
+- [x] Without the variable, the database name and CI behaviour are unchanged
+- [x] AGENTS.md (Environment) says how to run module tests in parallel checkouts
