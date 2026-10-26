@@ -2,6 +2,7 @@ import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/
 import { VOUCHER_MODULE } from "../../../../../modules/voucher"
 import VoucherModuleService from "../../../../../modules/voucher/service"
 import { emptyPoolCounts } from "../../../../../modules/voucher/types"
+import { dayOf } from "../../../../../modules/voucher/utils/timezone"
 import { voucherProductVariantId } from "../../voucher-product-variant"
 
 // A Voucher product's batches, newest purchase first, each with its Pool counted by status.
@@ -19,11 +20,14 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     }
   )
   const counts = await service.countPool("batch", batches.map((batch) => batch.id))
+  const timezone = await service.getTimezone()
 
   res.json({
     batches: batches.map((batch) => ({
       id: batch.id,
       purchased_at: batch.purchased_at,
+      // The day of the purchase where the store is, so every admin shows the same day.
+      purchased_day: dayOf(new Date(batch.purchased_at), timezone),
       unit_cost: batch.unit_cost === null ? null : Number(batch.unit_cost),
       reference: batch.reference,
       redemption_instructions: batch.redemption_instructions,

@@ -59,7 +59,7 @@ A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR
 - `POST /admin/voucher-products` with `variant_id`, `face_value` and `currency_code` marks a variant. An unknown variant is refused (404) and so is one that is already marked (422).
 - `GET /admin/voucher-products` lists them by Partner (the Medusa product's title), then variant, with the variant and its product (`id`, `title`), `available_vouchers` and `counts` (`limit` and `offset`, 50 by default).
 - `GET /admin/voucher-products/:id` returns one with its variant, the Medusa product and `counts`; an unknown id is refused (404).
-- `GET /admin/voucher-products/:id/batches` lists its Voucher batches, newest purchase first, each with `purchased_at`, `unit_cost`, `reference`, `redemption_instructions` and its own `counts` (`limit` and `offset`, 20 by default).
+- `GET /admin/voucher-products/:id/batches` lists its Voucher batches, newest purchase first, each with `purchased_at`, `purchased_day` (its day in the plugin's `timezone`, as `YYYY-MM-DD`), `unit_cost`, `reference`, `redemption_instructions` and its own `counts` (`limit` and `offset`, 20 by default).
 - `GET /admin/voucher-products/:id/vouchers` lists its Vouchers, soonest to expire first and open-ended last, each with `status` (one of the `counts` names), `code_hint` (the code's last characters, never the code), `batch`, `first_day` and `last_day` (whole days in the plugin's `timezone`, null when open) and the `order` (`id`, `display_id`) it was allocated to. Filter with `status` and `batch_id`; `limit` and `offset`, 20 by default.
 - `POST /admin/voucher-products/:id` changes `face_value` or `currency_code`, only while the Voucher product has no Vouchers.
 
@@ -208,6 +208,8 @@ Escape any value you put into the HTML yourself; the default email does.
 ## Importing vouchers
 
 `POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `voucher_product_id` (an existing Voucher product, see above; an unknown one is refused with 404), `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The batch stores only these per-purchase details: the Face value and currency are the Voucher product's, and the Partner is not stored because the Medusa product already says whose voucher it is. The response is the batch and the number imported (`imported`), never the codes.
+
+`purchased_at` is either a day alone, `YYYY-MM-DD`, stored as 00:00 of that day in the plugin's `timezone` option (so `2026-10-01` in `Asia/Bangkok` is `2026-09-30T17:00:00.000Z`), or a date and time (ISO 8601), stored as given. A day that does not exist, such as `2026-02-30`, is refused (400). The admin's import dialog sends the day chosen. Before this, a day alone was stored as 00:00 UTC; batches already stored keep their `purchased_at`.
 
 The CSV needs a header row. `code` is required; `pin`, `valid_from` and `valid_until` are optional; other columns are rejected.
 

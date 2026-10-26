@@ -93,9 +93,9 @@ const BatchesSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) 
 
   const columns = useMemo(
     () => [
-      batchColumns.accessor("purchased_at", {
+      batchColumns.accessor("purchased_day", {
         header: t("detail.purchasedAt"),
-        cell: ({ getValue }) => getFullDate({ date: getValue() }),
+        cell: ({ getValue }) => getFullDate({ date: localDay(getValue()) }),
       }),
       batchColumns.accessor("reference", {
         header: t("detail.reference"),
@@ -182,7 +182,7 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
         type: "radio",
         label: t("detail.batch"),
         options: (batchOptions?.batches ?? []).map((batch) => ({
-          label: batch.reference ?? getFullDate({ date: batch.purchased_at }),
+          label: batch.reference ?? getFullDate({ date: localDay(batch.purchased_day) }),
           value: batch.id,
         })),
       }),

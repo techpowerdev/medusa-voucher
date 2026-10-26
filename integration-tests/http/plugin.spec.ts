@@ -4,6 +4,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { VoucherStatus } from "../../src/modules/voucher/constants"
 import { VOUCHER_MODULE } from "../../src/modules/voucher"
 import VoucherModuleService from "../../src/modules/voucher/service"
+import { importVoucherBatchWorkflow } from "../../src/workflows/import-voucher-batch"
 import { createAdminHeaders, createVariant } from "../helpers/admin"
 
 jest.setTimeout(60 * 1000)
@@ -95,6 +96,48 @@ medusaIntegrationTestRunner({
           })
           expect(vouchers).toHaveLength(2)
           expect(vouchers.every((v) => v.variant_id === variantId)).toBe(true)
+        })
+
+        it("stores a purchase day as the start of that day in the plugin's time zone", async () => {
+          const response = await importCsv("code\nCSV-DAY-0001")
+
+          expect(response.status).toBe(201)
+          // Midnight of 1 October in Bangkok (UTC+7), the test application's default.
+          expect(response.data.voucher_batch.purchased_at).toBe("2026-09-30T17:00:00.000Z")
+
+          const batches = await api.get(`/admin/voucher-products/${voucherProductId}/batches`, headers)
+          expect(batches.data.batches).toEqual([
+            expect.objectContaining({
+              purchased_at: "2026-09-30T17:00:00.000Z",
+              purchased_day: "2026-10-01",
+            }),
+          ])
+        })
+
+        it("stores a purchase date and time as given", async () => {
+          const response = await importCsv("code\nCSV-DAY-0003", {
+            purchased_at: "2026-10-01T09:15:00.000Z",
+          })
+
+          expect(response.status).toBe(201)
+          expect(response.data.voucher_batch.purchased_at).toBe("2026-10-01T09:15:00.000Z")
+        })
+
+        it("refuses a purchase day that is not on the calendar, creating nothing", async () => {
+          const response = await importCsv("code\nCSV-DAY-0002", { purchased_at: "2026-02-30" })
+
+          expect(response.status).toBe(400)
+          expect(await service().listVoucherBatches()).toHaveLength(0)
+        })
+
+        it("refuses a purchase day that is not on the calendar when the workflow is run directly", async () => {
+          const { errors } = await importVoucherBatchWorkflow(getContainer()).run({
+            input: { voucher_product_id: voucherProductId, purchased_at: "2026-02-30", csv: "code\nCSV-DAY-0004" },
+            throwOnError: false,
+          })
+
+          expect(errors[0].error.message).toMatch(/not a day on the calendar/)
+          expect(await service().listVoucherBatches()).toHaveLength(0)
         })
 
         it("imports a file of thousands of rows, larger than a default JSON body", async () => {
