@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
 
 jobs:
@@ -35,7 +35,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: No debug output left in code or tests
+        run: '! grep -rnE "console\.(log|debug)|DEBUG" src integration-tests'
       - run: pnpm lint
+      - run: pnpm typecheck
       - run: pnpm build
       - name: Check migrations are up to date
         run: |

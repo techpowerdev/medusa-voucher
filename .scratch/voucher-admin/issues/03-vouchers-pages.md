@@ -1,0 +1,13 @@
+# 03: Vouchers pages in the admin
+
+**What to build:** a "Vouchers" route in the admin sidebar listing Voucher products (Partner, variant, Face value, Available, Expired, under Minimum remaining validity, Allocated, Delivered; ordered by product title), and a page per Voucher product with its counts, its batches and its Vouchers with the filters and pages of ticket 02. Read only. Labels in English and Thai through the admin i18n. See the admin spec.
+
+**Blocked by:** 06 (Turn Vouchers past their Validity period Expired), which follows 02.
+
+**Status:** done (PR #27)
+
+- [x] The list shows every Voucher product with its counts and links to its page
+- [x] The Voucher product page shows counts, batches and Vouchers, with the status and batch filters and paging
+- [x] No code, PIN or hash appears on either page
+- [x] English and Thai labels
+- [x] Checked on a real screen in the dev app with screenshots (rule 13)
