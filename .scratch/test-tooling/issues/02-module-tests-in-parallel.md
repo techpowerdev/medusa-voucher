@@ -6,7 +6,7 @@
 
 **Blocked by:** none.
 
-**Status:** needs-triage
+**Status:** done (PR #41)
 
 - [x] Two module test runs with different values of the variable, started at the same time, both pass (shown in the PR)
 - [x] Without the variable, the database name and CI behaviour are unchanged
