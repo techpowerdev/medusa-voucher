@@ -1,7 +1,7 @@
 import { createWorkflow, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
-import { retryOrdersWaitingOnFailuresStep } from "./steps/retry-orders-waiting-on-failures"
+import { retryVoucherAllocationFailuresStep } from "./steps/retry-voucher-allocation-failures"
 
-export const retryAllocationFailuresWorkflowId = "retry-allocation-failures"
+export const retryAllocationFailuresWorkflowId = "retry-voucher-allocation-failures"
 
 /**
  * Retries the open Allocation failures of a Voucher product, oldest first, one order at a time
@@ -11,6 +11,6 @@ export const retryAllocationFailuresWorkflowId = "retry-allocation-failures"
 export const retryAllocationFailuresWorkflow = createWorkflow(
   retryAllocationFailuresWorkflowId,
   (input: { voucher_product_id: string }) => {
-    return new WorkflowResponse(retryOrdersWaitingOnFailuresStep(input))
+    return new WorkflowResponse(retryVoucherAllocationFailuresStep(input))
   }
 )

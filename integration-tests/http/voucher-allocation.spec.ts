@@ -69,7 +69,7 @@ medusaIntegrationTestRunner({
           VoucherStatus.AVAILABLE
         )
 
-        const failures = await service().listAllocationFailures({ order_id: order.id })
+        const failures = await service().listVoucherAllocationFailures({ order_id: order.id })
         expect(failures).toEqual([
           expect.objectContaining({
             order_line_item_id: order.items![0].id,
@@ -124,7 +124,7 @@ medusaIntegrationTestRunner({
         const { result } = await allocate(order.id)
 
         expect(result).toEqual({ allocated: [], failures: [], created: false })
-        expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
       it("records a failure for a Voucher product that has no Vouchers at all", async () => {
@@ -231,7 +231,7 @@ medusaIntegrationTestRunner({
           expect(result.allocated.map((a) => a.allocation_id).sort()).toEqual(before.map((a) => a.id).sort())
           const vouchers = await service().listVouchers({ variant_id: product.variantId })
           expect(vouchers.filter((v) => v.status === VoucherStatus.AVAILABLE)).toHaveLength(1)
-          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+          expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
         })
 
         it("allocates the whole order once when run again after a failure, once the Pool has enough", async () => {
@@ -262,7 +262,7 @@ medusaIntegrationTestRunner({
 
           expect(result.allocated).toEqual([])
           expect(result.failures).toEqual([expect.objectContaining({ requested: 2, available: 1 })])
-          const failures = await service().listAllocationFailures({ order_id: order.id })
+          const failures = await service().listVoucherAllocationFailures({ order_id: order.id })
           expect(failures).toEqual([
             expect.objectContaining({ status: AllocationFailureStatus.OPEN, quantity_requested: 2 }),
           ])
@@ -279,7 +279,7 @@ medusaIntegrationTestRunner({
             expect(result.allocated).toEqual([])
             expect(result.failures).toEqual([expect.objectContaining({ requested: 2 })])
           }
-          const failures = await service().listAllocationFailures({ order_id: order.id })
+          const failures = await service().listVoucherAllocationFailures({ order_id: order.id })
           expect(failures).toEqual([
             expect.objectContaining({ status: AllocationFailureStatus.OPEN, quantity_requested: 2 }),
           ])
@@ -297,7 +297,7 @@ medusaIntegrationTestRunner({
           expect(results.map(({ result }) => result.failures.length).sort()).toEqual([0, 1])
           const allocations = await service().listVoucherAllocations({ order_id: [first.id, second.id] })
           expect(allocations).toHaveLength(1)
-          const failures = await service().listAllocationFailures({ order_id: [first.id, second.id] })
+          const failures = await service().listVoucherAllocationFailures({ order_id: [first.id, second.id] })
           expect(failures).toEqual([expect.objectContaining({ quantity_requested: 1, quantity_available: 0 })])
         })
 
@@ -348,7 +348,7 @@ medusaIntegrationTestRunner({
           }
           const vouchers = await service().listVouchers({ variant_id: product.variantId })
           expect(vouchers.filter((v) => v.status === VoucherStatus.ALLOCATED)).toHaveLength(2)
-          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+          expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
         })
       })
     })

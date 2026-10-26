@@ -8,6 +8,6 @@ export default async function recoverUnallocatedPaidOrdersJob(container: MedusaC
 }
 
 export const config = {
-  name: "recover-unallocated-paid-orders",
+  name: "recover-unallocated-voucher-orders",
   schedule: "*/15 * * * *",
 }

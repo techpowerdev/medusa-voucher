@@ -43,7 +43,7 @@ medusaIntegrationTestRunner({
 
         const allocations = await service().listVoucherAllocations({ order_id: order.id })
         expect(allocations.map((a) => a.unit_index).sort()).toEqual([1, 2])
-        const [failure] = await service().listAllocationFailures({ order_id: order.id })
+        const [failure] = await service().listVoucherAllocationFailures({ order_id: order.id })
         expect(failure).toEqual(
           expect.objectContaining({ status: AllocationFailureStatus.RESOLVED, resolved_by: "system" })
         )
@@ -60,7 +60,7 @@ medusaIntegrationTestRunner({
 
         expect(result).toEqual({ allocated: [older.id], still_open: [newer.id], failed: [] })
         expect(await service().listVoucherAllocations({ order_id: newer.id })).toEqual([])
-        const [stillWaiting] = await service().listAllocationFailures({ order_id: newer.id })
+        const [stillWaiting] = await service().listVoucherAllocationFailures({ order_id: newer.id })
         expect(stillWaiting.status).toBe(AllocationFailureStatus.OPEN)
       })
 
@@ -109,7 +109,7 @@ medusaIntegrationTestRunner({
 
         expect(result).toEqual({ allocated: [], still_open: [order.id], failed: [] })
         expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-        const [failure] = await service().listAllocationFailures({ order_id: order.id })
+        const [failure] = await service().listVoucherAllocationFailures({ order_id: order.id })
         expect(failure.status).toBe(AllocationFailureStatus.OPEN)
       })
     })

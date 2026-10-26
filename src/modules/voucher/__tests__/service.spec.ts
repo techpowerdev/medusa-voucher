@@ -6,7 +6,7 @@ import {
   DeliveryStatus,
   VoucherStatus,
 } from "../constants"
-import AllocationFailure from "../models/allocation-failure"
+import VoucherAllocationFailure from "../models/voucher-allocation-failure"
 import Voucher from "../models/voucher"
 import VoucherAllocation from "../models/voucher-allocation"
 import VoucherBatch from "../models/voucher-batch"
@@ -34,12 +34,15 @@ const voucherInput = (n: number, batch_id: string) => ({
 
 moduleIntegrationTestRunner<VoucherModuleService>({
   moduleName: VOUCHER_MODULE,
+  // Unset, the runner names the database after the module, so two checkouts running these
+  // tests at once would rebuild each other's tables; give each checkout its own name.
+  dbName: process.env.VOUCHER_TEST_DB_NAME,
   moduleModels: [
     Voucher,
     VoucherBatch,
     VoucherProduct,
     VoucherAllocation,
-    AllocationFailure,
+    VoucherAllocationFailure,
     VoucherDelivery,
   ],
   resolve: "./src/modules/voucher",
@@ -245,7 +248,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
       })
 
       it("records an open allocation failure", async () => {
-        const failure = await service.createAllocationFailures({
+        const failure = await service.createVoucherAllocationFailures({
           order_id: "order_1",
           order_line_item_id: "item_1",
           variant_id: "variant_100",

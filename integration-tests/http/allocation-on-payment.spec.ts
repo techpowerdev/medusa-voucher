@@ -57,7 +57,7 @@ medusaIntegrationTestRunner({
         await run(order.id)
 
         expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-        expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
       it("allocates nothing while the payment is only partly captured", async () => {
@@ -68,7 +68,7 @@ medusaIntegrationTestRunner({
         await run(order.id)
 
         expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-        expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
       it("allocates once when run twice for the same paid order", async () => {
@@ -93,7 +93,7 @@ medusaIntegrationTestRunner({
         const { result } = await run(order.id)
 
         expect(result).toEqual({ allocated: [], failures: [], created: false })
-        expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+        expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
       })
 
       describe("Paid order rule", () => {
@@ -128,7 +128,7 @@ medusaIntegrationTestRunner({
           await run(order.id)
 
           expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+          expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
         })
 
         it("allocates nothing for a canceled order whose payment was captured", async () => {
@@ -140,7 +140,7 @@ medusaIntegrationTestRunner({
           await run(order.id)
 
           expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
-          expect(await service().listAllocationFailures({ order_id: order.id })).toEqual([])
+          expect(await service().listVoucherAllocationFailures({ order_id: order.id })).toEqual([])
         })
       })
 

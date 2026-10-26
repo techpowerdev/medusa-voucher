@@ -19,10 +19,14 @@ Requires `@medusajs/medusa` >= 2.21.2 and Node `^20.19.0 || >=22.12.0` (`.nvmrc`
 
 ## Installation
 
+The plugin is not published to npm yet. Each [GitHub Release](https://github.com/techpowerdev/medusa-voucher/releases) carries the built package as a `.tgz` file; install it by its URL (replace both version numbers with the release you want):
+
 ```bash
-npm install @khumkha/medusa-voucher
-# or: yarn add / pnpm add @khumkha/medusa-voucher
+npm install https://github.com/techpowerdev/medusa-voucher/releases/download/v0.2.0/khumkha-medusa-voucher-0.2.0.tgz
+# or: yarn add / pnpm add with the same URL
 ```
+
+Installing from the repository itself (`github:techpowerdev/medusa-voucher`) does not work: the built code in `.medusa/server` is not committed, so the package would have no code.
 
 Register it in `medusa-config.ts`:
 
@@ -81,15 +85,15 @@ The link between a Voucher product and its variant is a Medusa module link, so r
 
 Allocation starts on its own once an order is a Paid order: Medusa's payment status for the order is `captured`, or the order has a total of 0 and no payment collection (a cart with a total of 0 is completed without payment). The plugin's subscribers on `payment.captured` and `order.placed` run `allocateVouchersForPaidOrderWorkflow`, which checks this and then runs the allocation; a canceled, authorized, partly captured or refunded order is left alone. `order.placed` covers payment providers that capture when authorizing (such as Stripe with `capture: true`), which emit no `payment.captured`.
 
-A scheduled job, `recover-unallocated-paid-orders`, runs every 15 minutes and catches Paid orders whose subscriber failed (Medusa's event bus does not retry a subscriber by default) or whose event never arrived: orders created between 7 days and 10 minutes ago with a Voucher product line and neither an Allocation nor an Allocation failure. It logs each order it recovers as a warning and each one it could not as an error, then tries those again on its next run. Medusa runs scheduled jobs only on a server whose `workerMode` is `worker` or `shared`, so keep at least one such instance; the workflow behind it, `recoverUnallocatedPaidOrdersWorkflow`, is exported too.
+A scheduled job, `recover-unallocated-voucher-orders`, runs every 15 minutes and catches Paid orders whose subscriber failed (Medusa's event bus does not retry a subscriber by default) or whose event never arrived: orders created between 7 days and 10 minutes ago with a Voucher product line and neither an Allocation nor an Allocation failure. It logs each order it recovers as a warning and each one it could not as an error, then tries those again on its next run. Medusa runs scheduled jobs only on a server whose `workerMode` is `worker` or `shared`, so keep at least one such instance; the workflow behind it, `recoverUnallocatedPaidOrdersWorkflow`, is exported too.
 
 ### Allocation failures
 
 When a Voucher product's Pool cannot cover a Paid order, nothing is allocated and an open Allocation failure is recorded for each short line. After importing more Vouchers, an operator retries them (admin authentication):
 
-- `GET /admin/allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded.
+- `GET /admin/voucher-allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded.
 - `POST /admin/voucher-products/:id/retry-allocation-failures` tries each order waiting on that Voucher product once, oldest first, with the same all-or-none rule and the Paid order check as a new order, and returns `{ allocated, still_open, failed }` (order ids). An order also short on another Voucher product, or refunded or canceled while it waited, stays open. An order whose allocation throws is logged as an error and listed in `failed`; the others are still tried.
-- `POST /admin/allocation-failures/:id/resolve` with a `note` closes one failure settled another way (a refund, for example) and records the admin and the time. A failure already resolved is refused (422); an unknown one is 404.
+- `POST /admin/voucher-allocation-failures/:id/resolve` with a `note` closes one failure settled another way (a refund, for example) and records the admin and the time. A failure already resolved is refused (422); an unknown one is 404.
 
 An order that gets its Vouchers by any route (a retry, a subscriber or the recovery job) has its open failures resolved automatically, with `resolved_by` set to `system`.
 

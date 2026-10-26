@@ -1,10 +1,10 @@
 import { createWorkflow, transform, WorkflowResponse } from "@medusajs/framework/workflows-sdk"
 import {
   RECOVERY_PAGE_SIZE,
-  recoverUnallocatedPaidOrdersStep,
-} from "./steps/recover-unallocated-paid-orders"
+  recoverUnallocatedVoucherOrdersStep,
+} from "./steps/recover-unallocated-voucher-orders"
 
-export const recoverUnallocatedPaidOrdersWorkflowId = "recover-unallocated-paid-orders"
+export const recoverUnallocatedPaidOrdersWorkflowId = "recover-unallocated-voucher-orders"
 
 /**
  * Allocates the Paid orders that were never allocated because a subscriber threw or its event
@@ -21,6 +21,6 @@ export const recoverUnallocatedPaidOrdersWorkflow = createWorkflow(
       page_size: input.page_size ?? RECOVERY_PAGE_SIZE,
     }))
 
-    return new WorkflowResponse(recoverUnallocatedPaidOrdersStep(stepInput))
+    return new WorkflowResponse(recoverUnallocatedVoucherOrdersStep(stepInput))
   }
 )
