@@ -2,13 +2,12 @@
 
 A [Medusa](https://medusajs.com) v2 plugin for reselling vouchers issued by third-party partners (supermarkets, coffee chains and similar). You buy voucher codes from a partner in advance, import them, sell them to customers as ordinary Medusa products, and deliver one code per purchased unit by email.
 
-> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist, with admin pages to mark Voucher products, review the Pool and import a CSV. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
+> **Status: early development.** The data model, encrypted storage, CSV import API, Voucher products, automatic allocation of paid orders and retrying or resolving Allocation failures and emailing an order's Vouchers once they are allocated, with retries, and recording Medusa's fulfillment of the delivered Voucher lines exist, with admin pages to mark Voucher products, review the Pool and import a CSV, and a store API for signed-in customers to view the Vouchers they bought. The design is described in [`GLOSSARY.md`](./GLOSSARY.md) and [`docs/adr/`](./docs/adr).
 
 ## Planned features
 
 - Low stock and expiring-soon alerts.
 - Replacing a Delivered Voucher that did not work.
-- Store API for signed-in customers to view the codes they bought, with the QR code.
 - Delivery through LINE.
 
 This is not a gift card, store credit or discount code plugin: Medusa already provides those through its Loyalty plugin and Promotion module.
@@ -208,6 +207,22 @@ The default email is in English. To write your own (your language, your branding
 ```
 
 Escape any value you put into the HTML yourself; the default email does.
+
+## Customers viewing their Vouchers
+
+A signed-in customer can see the Vouchers of their own orders (store API; Medusa requires a customer session or bearer token on `/store/customers/me*`, and every `/store` request needs a publishable API key). The plugin provides the API only; build the "My vouchers" page in your storefront.
+
+- `GET /store/customers/me/vouchers` lists the customer's Allocated and Delivered Vouchers (never Void ones), newest first, each with `id`, `status`, `code_hint` (the code's last characters, never the code), `order` (`id`, `display_id`), `product` and `variant` (`title`), `face_value`, `currency_code`, `first_day` and `last_day` (whole days in the plugin's `timezone`, null when open) and `redemption_instructions`. Filter with `order_id`; `limit` and `offset`, 20 by default.
+- `GET /store/customers/me/vouchers/:id` returns one of them in full: the same fields plus `code`, `pin` (null when there is none) and `qr_code`, a `data:image/png;base64,...` QR code of the code alone (never the PIN), generated on each request and never stored. Another customer's Voucher, a Void one or an unknown id is 404.
+
+Only orders placed while signed in belong to the customer; guest orders are not shown. Viewing a Voucher is not a Delivery and changes nothing.
+
+```ts
+// In a Next.js storefront with the Medusa JS SDK, signed in as the customer.
+const { vouchers } = await sdk.client.fetch("/store/customers/me/vouchers")
+const { voucher } = await sdk.client.fetch(`/store/customers/me/vouchers/${vouchers[0].id}`)
+// <img src={voucher.qr_code} alt={voucher.code} />
+```
 
 ## Importing vouchers
 
