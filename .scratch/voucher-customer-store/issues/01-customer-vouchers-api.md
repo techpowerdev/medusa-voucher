@@ -4,7 +4,7 @@
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** done (PR #46)
 
 - [x] The list shows only the signed-in customer's Allocated and Delivered Vouchers, masked, newest order first, filterable by order and paginated (HTTP tests)
 - [x] One Voucher returns code, PIN and a QR code of the code alone; another customer's, a Void or an unknown one is 404 (HTTP tests)
