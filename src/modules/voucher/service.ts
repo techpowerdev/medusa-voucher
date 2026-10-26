@@ -691,6 +691,7 @@ class VoucherModuleService extends MedusaService({
         "v.valid_until",
         "b.id as batch_id",
         "b.reference as batch_reference",
+        "b.purchased_at as batch_purchased_at",
         "a.order_id",
         knex.raw(`${poolStatus} as pool_status`, bindings)
       )
@@ -702,7 +703,11 @@ class VoucherModuleService extends MedusaService({
       id: row.id,
       status: row.pool_status,
       code_hint: row.code_hint,
-      batch: { id: row.batch_id, reference: row.batch_reference },
+      batch: {
+        id: row.batch_id,
+        reference: row.batch_reference,
+        purchased_day: dayOf(new Date(row.batch_purchased_at), this.timezone_),
+      },
       first_day: row.valid_from ? dayOf(new Date(row.valid_from), this.timezone_) : null,
       last_day: row.valid_until ? lastDayOf(new Date(row.valid_until), this.timezone_) : null,
       order_id: row.order_id ?? null,
