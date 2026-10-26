@@ -4,7 +4,7 @@
 
 **Blocked by:** none.
 
-**Status:** ready-for-agent
+**Status:** done (PR #40)
 
 - [x] `/admin/voucher-allocation-failures` lists and resolves failures with `voucher_allocation_failure(s)` keys; the old paths return 404 (HTTP tests)
 - [x] The job, workflow and step ids are the new ones
