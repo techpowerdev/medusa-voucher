@@ -16,7 +16,7 @@ import {
   VoucherImportProblemCode,
   VoucherStatus,
 } from "./constants"
-import AllocationFailure from "./models/allocation-failure"
+import VoucherAllocationFailure from "./models/voucher-allocation-failure"
 import Voucher from "./models/voucher"
 import VoucherAllocation from "./models/voucher-allocation"
 import VoucherBatch from "./models/voucher-batch"
@@ -101,7 +101,7 @@ class VoucherModuleService extends MedusaService({
   VoucherBatch,
   VoucherProduct,
   VoucherAllocation,
-  AllocationFailure,
+  VoucherAllocationFailure,
   VoucherDelivery,
 }) {
   protected crypto_: VoucherCrypto
@@ -307,7 +307,7 @@ class VoucherModuleService extends MedusaService({
           return { allocated: existing, failures: [], created: false }
         }
 
-        const open = await this.listAllocationFailures(
+        const open = await this.listVoucherAllocationFailures(
           { order_id: input.order_id, status: AllocationFailureStatus.OPEN },
           {},
           sharedContext
@@ -372,7 +372,7 @@ class VoucherModuleService extends MedusaService({
     if (failures.length) {
       // A line already waiting on an open failure keeps that one, so a repeated run while
       // the Pool is still short adds nothing.
-      const open = await this.listAllocationFailures(
+      const open = await this.listVoucherAllocationFailures(
         {
           order_line_item_id: failures.map((failure) => failure.order_line_item_id),
           status: AllocationFailureStatus.OPEN,
@@ -382,7 +382,7 @@ class VoucherModuleService extends MedusaService({
       )
       const waiting = new Set(open.map((failure) => failure.order_line_item_id))
 
-      await this.createAllocationFailures(
+      await this.createVoucherAllocationFailures(
         failures.filter((failure) => !waiting.has(failure.order_line_item_id)).map((failure) => ({
           order_id: input.order_id,
           order_line_item_id: failure.order_line_item_id,
@@ -646,10 +646,10 @@ class VoucherModuleService extends MedusaService({
     )
 
     if (resolved.length) {
-      return await this.retrieveAllocationFailure(input.id, {}, sharedContext)
+      return await this.retrieveVoucherAllocationFailure(input.id, {}, sharedContext)
     }
 
-    const [existing] = await this.listAllocationFailures(
+    const [existing] = await this.listVoucherAllocationFailures(
       { id: input.id },
       { select: ["id"] },
       sharedContext
@@ -665,7 +665,7 @@ class VoucherModuleService extends MedusaService({
 
   // Marks the open failures matching `where` resolved and returns their ids. The status check
   // and the change are one UPDATE, so of two concurrent callers only one changes a failure:
-  // the generated `updateAllocationFailures` reads the rows first and would let both win.
+  // the generated `updateVoucherAllocationFailures` reads the rows first and would let both win.
   @InjectTransactionManager()
   protected async resolveOpenFailures_(
     where: { id?: string; order_id?: string },
@@ -674,7 +674,7 @@ class VoucherModuleService extends MedusaService({
   ): Promise<string[]> {
     const knex = transactionKnex(sharedContext, "resolveOpenFailures_")
     const now = new Date()
-    const rows: { id: string }[] = await knex("allocation_failure")
+    const rows: { id: string }[] = await knex("voucher_allocation_failure")
       .where({ ...where, status: AllocationFailureStatus.OPEN, deleted_at: null })
       .update({
         status: AllocationFailureStatus.RESOLVED,

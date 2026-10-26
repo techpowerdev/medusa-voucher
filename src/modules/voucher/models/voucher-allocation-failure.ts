@@ -1,8 +1,8 @@
 import { model } from "@medusajs/framework/utils"
 import { AllocationFailureStatus } from "../constants"
 
-const AllocationFailure = model
-  .define("allocation_failure", {
+const VoucherAllocationFailure = model
+  .define("voucher_allocation_failure", {
     id: model.id({ prefix: "vfail" }).primaryKey(),
     order_id: model.text(),
     order_line_item_id: model.text(),
@@ -25,4 +25,4 @@ const AllocationFailure = model
     },
   ])
 
-export default AllocationFailure
+export default VoucherAllocationFailure

@@ -32,7 +32,7 @@ export type RecoveryOutcome = {
 async function handledOrderIds(service: VoucherModuleService, orderIds: string[]) {
   const [allocations, failures] = await Promise.all([
     service.listVoucherAllocations({ order_id: orderIds }, { select: ["order_id"] }),
-    service.listAllocationFailures({ order_id: orderIds }, { select: ["order_id"] }),
+    service.listVoucherAllocationFailures({ order_id: orderIds }, { select: ["order_id"] }),
   ])
 
   return new Set([...allocations, ...failures].map((row) => row.order_id))
@@ -55,8 +55,8 @@ async function voucherVariantIds(container: MedusaContainer) {
 // trigger workflow on its own, so one that throws cannot stop the others; it is tried again
 // on the next run. A recovered order means a subscriber did not do its work, so it is logged
 // for a person to notice. Logs carry ids and counts, never codes.
-export const recoverUnallocatedPaidOrdersStep = createStep(
-  "recover-unallocated-paid-orders",
+export const recoverUnallocatedVoucherOrdersStep = createStep(
+  "recover-unallocated-voucher-orders",
   async (input: RecoverUnallocatedPaidOrdersInput, { container }) => {
     const query = container.resolve(ContainerRegistrationKeys.QUERY)
     const logger = container.resolve(ContainerRegistrationKeys.LOGGER)

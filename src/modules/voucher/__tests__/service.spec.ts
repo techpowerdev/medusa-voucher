@@ -6,7 +6,7 @@ import {
   DeliveryStatus,
   VoucherStatus,
 } from "../constants"
-import AllocationFailure from "../models/allocation-failure"
+import VoucherAllocationFailure from "../models/voucher-allocation-failure"
 import Voucher from "../models/voucher"
 import VoucherAllocation from "../models/voucher-allocation"
 import VoucherBatch from "../models/voucher-batch"
@@ -39,7 +39,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
     VoucherBatch,
     VoucherProduct,
     VoucherAllocation,
-    AllocationFailure,
+    VoucherAllocationFailure,
     VoucherDelivery,
   ],
   resolve: "./src/modules/voucher",
@@ -245,7 +245,7 @@ moduleIntegrationTestRunner<VoucherModuleService>({
       })
 
       it("records an open allocation failure", async () => {
-        const failure = await service.createAllocationFailures({
+        const failure = await service.createVoucherAllocationFailures({
           order_id: "order_1",
           order_line_item_id: "item_1",
           variant_id: "variant_100",

@@ -24,7 +24,7 @@ Rename every host-visible name that lacks `voucher`, keep the stored data, and r
 - Table `allocation_failure` → `voucher_allocation_failure`, model `AllocationFailure` → `VoucherAllocationFailure`; id prefix `vfail` unchanged. The migration renames the table, its indexes and constraints (hand-written: a generated migration would drop and recreate the table and lose rows).
 - Admin routes `/admin/allocation-failures` and `/admin/allocation-failures/:id/resolve` → `/admin/voucher-allocation-failures` and `/admin/voucher-allocation-failures/:id/resolve`; the old paths are removed, not aliased. `POST /admin/voucher-products/:id/retry-allocation-failures` stays.
 - Response keys `allocation_failures` / `allocation_failure` → `voucher_allocation_failures` / `voucher_allocation_failure`.
-- Ids: job, workflow and step `recover-unallocated-paid-orders` → `recover-unallocated-voucher-orders`; `resolve-allocation-failure` → `resolve-voucher-allocation-failure`; `retry-orders-waiting-on-failures` → `retry-voucher-allocation-failures`.
+- Ids: job, workflow and step `recover-unallocated-paid-orders` → `recover-unallocated-voucher-orders`; workflow and step `resolve-allocation-failure` → `resolve-voucher-allocation-failure`; workflow `retry-allocation-failures` and step `retry-orders-waiting-on-failures` → `retry-voucher-allocation-failures` (the two workflow ids were found while building, under Q1's "every id lacking voucher").
 - Exported TypeScript names (`recoverUnallocatedPaidOrdersWorkflow`, `retryAllocationFailuresWorkflow`, …) stay.
 - GLOSSARY unchanged (the term Allocation failure keeps its meaning).
 - Release 0.2.0 right after merge, with the `.tgz` attached and the path change in the notes.

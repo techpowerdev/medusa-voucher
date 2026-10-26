@@ -41,7 +41,7 @@ export const GET = async (
 
   const [failures, count] = voucher_product_id && !voucherProductByVariant.size
     ? [[], 0]
-    : await service.listAndCountAllocationFailures(
+    : await service.listAndCountVoucherAllocationFailures(
         {
           status,
           ...(voucher_product_id ? { variant_id: [...voucherProductByVariant.keys()] } : {}),
@@ -55,7 +55,7 @@ export const GET = async (
       )
 
   res.json({
-    allocation_failures: failures.map(({ variant_id, ...failure }) => ({
+    voucher_allocation_failures: failures.map(({ variant_id, ...failure }) => ({
       ...failure,
       voucher_product_id: voucherProductByVariant.get(variant_id) ?? null,
     })),

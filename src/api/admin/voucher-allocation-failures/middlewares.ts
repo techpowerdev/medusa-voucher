@@ -23,12 +23,12 @@ export type ResolveAllocationFailureBody = z.infer<typeof ResolveAllocationFailu
 
 export const allocationFailureMiddlewares: MiddlewareRoute[] = [
   {
-    matcher: "/admin/allocation-failures/:id/resolve",
+    matcher: "/admin/voucher-allocation-failures/:id/resolve",
     method: "POST",
     middlewares: [validateAndTransformBody(ResolveAllocationFailureSchema)],
   },
   {
-    matcher: "/admin/allocation-failures",
+    matcher: "/admin/voucher-allocation-failures",
     method: "GET",
     middlewares: [
       validateAndTransformQuery(ListAllocationFailuresSchema, {
