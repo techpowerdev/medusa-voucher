@@ -6,7 +6,7 @@
 
 **Blocked by:** none.
 
-**Status:** done (PR #41)
+**Status:** done (PR #41, merged into develop by #42)
 
 - [x] Two module test runs with different values of the variable, started at the same time, both pass (shown in the PR)
 - [x] Without the variable, the database name and CI behaviour are unchanged
