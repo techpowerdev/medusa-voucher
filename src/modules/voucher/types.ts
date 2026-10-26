@@ -1,3 +1,5 @@
+import { VoucherStatus } from "./constants"
+
 export type VoucherModuleOptions = {
   /**
    * Secret from which the keys that encrypt voucher codes and PINs and the keys that
@@ -157,6 +159,21 @@ export type PoolVoucher = {
   last_day: string | null
   // The order of its first-time Allocation, if any.
   order_id: string | null
+}
+
+// A Voucher of a customer's own order, as the store shows it: never the code.
+export type CustomerVoucher = {
+  id: string
+  status: VoucherStatus.ALLOCATED | VoucherStatus.DELIVERED
+  code_hint: string
+  order_id: string
+  variant_id: string
+  face_value: number
+  currency_code: string
+  // Whole days (`YYYY-MM-DD`) in the store's timezone; null when that end is open.
+  first_day: string | null
+  last_day: string | null
+  redemption_instructions: string | null
 }
 
 // A Voucher product's Pool by what can be done with it (see `countPool`).

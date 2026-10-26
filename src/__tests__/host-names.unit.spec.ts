@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, statSync } from "fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "fs"
+import { tmpdir } from "os"
 import { join } from "path"
 import { VoucherEvents } from "../modules/voucher/constants"
 import * as workflows from "../workflows"
@@ -17,6 +18,31 @@ const sourceFiles = (dir: string): string[] =>
 
     return path.endsWith(".ts") ? [path] : []
   })
+
+const directories = (dir: string) =>
+  existsSync(dir) ? readdirSync(dir).filter((name) => statSync(join(dir, name)).isDirectory()) : []
+
+// The first segment after /admin or /store starts with voucher. The one exception is a
+// customer's own data, which Medusa keeps under /store/customers/me (and authenticates there):
+// those routes start with voucher one level down.
+const unprefixedApiPaths = (apiDir: string): string[] =>
+  ["admin", "store"].flatMap((scope) =>
+    directories(join(apiDir, scope)).flatMap((name) => {
+      if (scope === "store" && name === "customers") {
+        const customers = join(apiDir, scope, name)
+
+        return directories(customers).flatMap((child) =>
+          child === "me"
+            ? directories(join(customers, "me"))
+                .filter((own) => !own.startsWith("voucher"))
+                .map((own) => `/store/customers/me/${own}`)
+            : [`/store/customers/${child}`]
+        )
+      }
+
+      return name.startsWith("voucher") ? [] : [`/${scope}/${name}`]
+    })
+  )
 
 const namesIn = (pattern: RegExp) =>
   sourceFiles(SRC).flatMap((file) =>
@@ -57,14 +83,42 @@ describe("names the host sees", () => {
   })
 
   it("every admin and store API path starts with voucher", () => {
-    const paths = ["admin", "store"].flatMap((scope) =>
-      readdirSync(join(SRC, "api", scope))
-        .filter((name) => statSync(join(SRC, "api", scope, name)).isDirectory())
-        .map((name) => `/${scope}/${name}`)
-    )
+    expect(unprefixedApiPaths(join(SRC, "api"))).toEqual([])
+  })
 
-    expect(paths.length).toBeGreaterThan(0)
-    expect(paths.filter((path) => !path.split("/")[2].startsWith("voucher"))).toEqual([])
+  describe("the API path check", () => {
+    let api: string
+
+    beforeEach(() => {
+      api = mkdtempSync(join(tmpdir(), "host-names-"))
+    })
+
+    afterEach(() => {
+      rmSync(api, { recursive: true, force: true })
+    })
+
+    const route = (path: string) => mkdirSync(join(api, path), { recursive: true })
+
+    it("accepts a customer's own routes under /store/customers/me/voucher...", () => {
+      route("store/customers/me/vouchers/[id]")
+      route("admin/voucher-products")
+
+      expect(unprefixedApiPaths(api)).toEqual([])
+    })
+
+    it("refuses any other route, under /store/customers too", () => {
+      route("store/customers/me/wishlist")
+      route("store/customers/addresses")
+      route("store/carts")
+      route("admin/orders")
+
+      expect(unprefixedApiPaths(api).sort()).toEqual([
+        "/admin/orders",
+        "/store/carts",
+        "/store/customers/addresses",
+        "/store/customers/me/wishlist",
+      ])
+    })
   })
 
   it("every event name starts with voucher.", () => {

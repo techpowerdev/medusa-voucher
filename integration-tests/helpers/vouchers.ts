@@ -52,15 +52,16 @@ export type OrderLine = {
 }
 
 // An order with one line item per entry, through the Order module. `email: null` creates an
-// order without an email address.
+// order without an email address; `customer_id` makes it a registered customer's order.
 export async function createOrder(
   container: MedusaContainer,
   lines: OrderLine[],
-  { email = "customer@example.test" }: { email?: string | null } = {}
+  { email = "customer@example.test", customer_id }: { email?: string | null; customer_id?: string } = {}
 ) {
   const order = await container.resolve(Modules.ORDER).createOrders({
     currency_code: "thb",
     email: email ?? undefined,
+    customer_id,
     items: lines.map((line, index) => ({
       title: `Line ${index + 1}`,
       variant_id: line.variant_id,
