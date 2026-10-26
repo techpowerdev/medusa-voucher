@@ -477,6 +477,52 @@ moduleIntegrationTestRunner<VoucherModuleService>({
             })
           ).rejects.toThrow("Repeated codes at lines: 7")
         })
+
+        it("lists each repeated line of a file as a problem, without the code", async () => {
+          const batch = await createBatch()
+
+          const error = await service
+            .createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [
+                { code: "SECRET-0001", source_line: 2 },
+                { code: "SECRET-0001", source_line: 4 },
+                { code: "SECRET-0001", source_line: 5 },
+              ],
+            })
+            .catch((error) => error)
+
+          expect(error.message).toBe("Repeated codes at lines: 4, 5")
+          expect(error.problems).toEqual([
+            { line: 4, code: "code_repeated_in_file" },
+            { line: 5, code: "code_repeated_in_file" },
+          ])
+        })
+
+        it("lists each line of a file whose code is already stored as a problem", async () => {
+          const batch = await createBatch()
+          await service.createVouchersFromCodes({
+            batch_id: batch.id,
+            vouchers: [{ code: "SECRET-0001" }, { code: "SECRET-0002" }],
+          })
+
+          const error = await service
+            .createVouchersFromCodes({
+              batch_id: batch.id,
+              vouchers: [
+                { code: "SECRET-0002", source_line: 2 },
+                { code: "NEW-0003", source_line: 3 },
+                { code: "SECRET-0001", source_line: 4 },
+              ],
+            })
+            .catch((error) => error)
+
+          expect(error.message).toBe("Codes already stored at lines: 2, 4")
+          expect(error.problems).toEqual([
+            { line: 2, code: "code_already_stored" },
+            { line: 4, code: "code_already_stored" },
+          ])
+        })
       })
     })
   },

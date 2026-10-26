@@ -166,6 +166,55 @@ medusaIntegrationTestRunner({
           expect(await service().listVoucherBatches()).toHaveLength(0)
         })
 
+        it("returns the CSV's problems with their lines and codes beside the same message", async () => {
+          const response = await importCsv(
+            "code,pin,valid_from\nCSV-SECRET-0011,9876,2026-02-30\n,9876,"
+          )
+
+          expect(response.status).toBe(400)
+          expect(response.data).toEqual({
+            type: "invalid_data",
+            message:
+              "The CSV has 2 problem(s), nothing was imported. line 2: valid_from must be a date as YYYY-MM-DD or DD-MM-YYYY; line 3: The code is empty",
+            problems: [
+              { line: 2, code: "invalid_date", column: "valid_from" },
+              { line: 3, code: "empty_code" },
+            ],
+            problem_count: 2,
+          })
+          expect(JSON.stringify(response.data)).not.toMatch(/CSV-SECRET|9876/)
+          expect(await service().listVoucherBatches()).toHaveLength(0)
+        })
+
+        it("lists the first 20 problems and counts them all", async () => {
+          // Lines 2 to 26 have an empty code.
+          const response = await importCsv(
+            ["code,pin", ...Array(25).fill(",1"), "CSV-CODE-0012,1"].join("\n")
+          )
+
+          expect(response.status).toBe(400)
+          expect(response.data.problem_count).toBe(25)
+          expect(response.data.problems).toHaveLength(20)
+          expect(response.data.problems[19]).toEqual({ line: 21, code: "empty_code" })
+          expect(response.data.message).toMatch(/; and 5 more$/)
+        })
+
+        it("returns the lines of codes already stored as problems", async () => {
+          await importCsv("code\nCSV-SECRET-0013")
+
+          const response = await importCsv("code\nCSV-CODE-0014\nCSV-SECRET-0013")
+
+          expect(response.status).toBe(400)
+          expect(response.data).toEqual({
+            type: "invalid_data",
+            message: "Codes already stored at lines: 3",
+            problems: [{ line: 3, code: "code_already_stored" }],
+            problem_count: 1,
+          })
+          expect(JSON.stringify(response.data)).not.toMatch(/CSV-SECRET/)
+          expect(await service().listVoucherBatches()).toHaveLength(1)
+        })
+
         it("rolls the batch back when a code is already stored", async () => {
           await importCsv("code\nCSV-CODE-0005")
 

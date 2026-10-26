@@ -13,6 +13,7 @@ import {
   AllocationFailureStatus,
   DeliveryChannel,
   DeliveryStatus,
+  VoucherImportProblemCode,
   VoucherStatus,
 } from "./constants"
 import AllocationFailure from "./models/allocation-failure"
@@ -34,6 +35,7 @@ import {
   VoucherEmailRenderer,
   VoucherModuleOptions,
 } from "./types"
+import { VoucherImportError } from "./utils/import-error"
 import { parseCalendarDate, parseVoucherCsv } from "./utils/parse-voucher-csv"
 import { dayOf, DEFAULT_TIMEZONE, lastDayOf, startOfDay } from "./utils/timezone"
 import {
@@ -184,6 +186,11 @@ class VoucherModuleService extends MedusaService({
     const where = (index: number) =>
       fromFile ? `on line ${place(index)}` : String(place(index))
     const places = fromFile ? "lines" : "positions"
+    // A file's problems are listed by line for the import route; positions are not lines.
+    const refused = (message: string, lines: number[], code: VoucherImportProblemCode) =>
+      fromFile
+        ? new VoucherImportError(message, lines.map((line) => ({ line, code })))
+        : new MedusaError(MedusaError.Types.INVALID_DATA, message)
 
     const rows = vouchers.map((voucher, index) => {
       const code = normalizeCode(voucher.code ?? "")
@@ -231,9 +238,10 @@ class VoucherModuleService extends MedusaService({
     })
 
     if (repeated.length) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        `Repeated codes at ${places}: ${repeated.join(", ")}`
+      throw refused(
+        `Repeated codes at ${places}: ${repeated.join(", ")}`,
+        repeated,
+        VoucherImportProblemCode.CODE_REPEATED_IN_FILE
       )
     }
 
@@ -253,9 +261,10 @@ class VoucherModuleService extends MedusaService({
         .map((voucher) => place(positionByHash.get(voucher.code_hash) as number))
         .sort((a, b) => a - b)
 
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        `Codes already stored at ${places}: ${positions.join(", ")}`
+      throw refused(
+        `Codes already stored at ${places}: ${positions.join(", ")}`,
+        positions,
+        VoucherImportProblemCode.CODE_ALREADY_STORED
       )
     }
 

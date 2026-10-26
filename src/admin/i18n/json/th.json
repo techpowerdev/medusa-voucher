@@ -49,7 +49,20 @@
     "tooManyRows": "ไฟล์มี {{rows}} แถว นำเข้าได้ครั้งละไม่เกิน {{max}} แถว",
     "submit": "นำเข้า",
     "success": "นำเข้า Voucher แล้ว {{imported}} ใบ",
-    "failed": "ไม่ได้นำเข้า Voucher"
+    "failed": "ไม่ได้นำเข้า Voucher",
+    "problems": {
+      "invalid_csv_row": "บรรทัด {{line}}: แถวนี้ไม่ใช่ CSV ที่ถูกต้อง หรือจำนวนคอลัมน์ไม่ตรงกับหัวตาราง",
+      "no_rows": "ไฟล์ไม่มีแถว Voucher",
+      "missing_code_column": "บรรทัด {{line}}: หัวตารางต้องมีคอลัมน์ \"code\"",
+      "unknown_column": "บรรทัด {{line}}: ไม่รู้จักคอลัมน์ \"{{column}}\"",
+      "too_many_rows": "ไฟล์มี Voucher เกิน {{max}} ใบ แบ่งเป็นหลาย batch",
+      "empty_code": "บรรทัด {{line}}: รหัสว่าง",
+      "invalid_date": "บรรทัด {{line}}: {{column}} ต้องเป็นวันที่แบบ YYYY-MM-DD หรือ DD-MM-YYYY",
+      "period_ends_before_start": "บรรทัด {{line}}: valid_until อยู่ก่อน valid_from",
+      "code_repeated_in_file": "บรรทัด {{line}}: รหัสซ้ำกับบรรทัดก่อนหน้าในไฟล์",
+      "code_already_stored": "บรรทัด {{line}}: รหัสนี้มีอยู่ในระบบแล้ว"
+    },
+    "moreProblems": "และอีก {{more}} รายการ"
   },
   "widget": {
     "title": "Voucher product",

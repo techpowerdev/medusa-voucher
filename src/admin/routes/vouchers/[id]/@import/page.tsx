@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import * as zod from "zod"
 import { countCsvRows } from "../../../../lib/csv"
-import { importProblems } from "../../../../lib/import-problems"
+import { describeImportFailure, ImportFailureView } from "../../../../lib/import-problems"
 import {
   importVoucherBatch,
   listVoucherBatches,
@@ -63,7 +63,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
   const fileInput = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<CsvFile>()
   const [fileError, setFileError] = useState<string>()
-  const [problems, setProblems] = useState<{ summary: string; lines: string[] }>()
+  const [failure, setFailure] = useState<ImportFailureView>()
 
   const { data: product } = useQuery({
     queryKey: ["voucher-product", voucherProductId],
@@ -112,7 +112,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
     const csv = await chosen.text()
     setFile({ name: chosen.name, csv, rows: countCsvRows(csv) })
     setFileError(undefined)
-    setProblems(undefined)
+    setFailure(undefined)
   }
 
   const tooMany = !!file && file.rows > MAX_IMPORT_ROWS
@@ -123,7 +123,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
       return
     }
 
-    setProblems(undefined)
+    setFailure(undefined)
 
     await mutateAsync(
       {
@@ -139,7 +139,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
           toast.success(t("import.success", { imported: number(imported) }))
           handleSuccess()
         },
-        onError: (error) => setProblems(importProblems(error.message)),
+        onError: (error) => setFailure(describeImportFailure(error, number)),
       }
     )
   })
@@ -162,19 +162,25 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
                 </Text>
               </RouteFocusModal.Description>
             </div>
-            {problems && (
+            {failure && (
               <Alert variant="error">
                 <Text size="small" weight="plus">
                   {t("import.failed")}
                 </Text>
-                <Text size="small">{problems.summary}</Text>
-                {problems.lines.length > 0 && (
+                {"message" in failure ? (
+                  <Text size="small">{failure.message}</Text>
+                ) : (
                   <ul className="mt-2 list-disc pl-5">
-                    {problems.lines.map((line) => (
-                      <li key={line}>
-                        <Text size="small">{line}</Text>
+                    {failure.problems.map(({ key, values }, index) => (
+                      <li key={index}>
+                        <Text size="small">{t(key, values)}</Text>
                       </li>
                     ))}
+                    {failure.more > 0 && (
+                      <li>
+                        <Text size="small">{t("import.moreProblems", { more: number(failure.more) })}</Text>
+                      </li>
+                    )}
                   </ul>
                 )}
               </Alert>
