@@ -30,6 +30,7 @@ import {
   emptyPoolCounts,
   PoolCounts,
   PoolStatus,
+  CustomerVoucher,
   PoolVoucher,
   VoucherCodeInput,
   VoucherEmailRenderer,
@@ -561,6 +562,94 @@ class VoucherModuleService extends MedusaService({
     }
 
     return counts
+  }
+
+  /**
+   * One page of a customer's own Vouchers, newest Allocation first, optionally of one order,
+   * with the total that match: those Allocated or Delivered to an order of `customer_id`
+   * (recorded on the Allocation), never Void. Never a code.
+   */
+  @InjectManager()
+  async listCustomerVouchers(
+    input: { customer_id: string; order_id?: string; skip: number; take: number },
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<[CustomerVoucher[], number]> {
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const matching = this.customerVouchersQuery_(knex, input.customer_id).modify((query) => {
+      if (input.order_id) {
+        query.where("a.order_id", input.order_id)
+      }
+    })
+
+    const [{ total }] = await matching.clone().count({ total: "*" })
+    const rows = await this.selectCustomerVouchers_(matching)
+      .orderByRaw("a.created_at desc, a.order_line_item_id asc, a.unit_index asc")
+      .offset(input.skip)
+      .limit(input.take)
+
+    return [rows.map((row) => this.toCustomerVoucher_(row)), Number(total)]
+  }
+
+  /** One of a customer's own Vouchers as `listCustomerVouchers` shows it; NOT_FOUND otherwise. */
+  @InjectManager()
+  async retrieveCustomerVoucher(
+    customerId: string,
+    id: string,
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<CustomerVoucher> {
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const [row] = await this.selectCustomerVouchers_(
+      this.customerVouchersQuery_(knex, customerId).where("v.id", id)
+    )
+
+    if (!row) {
+      throw new MedusaError(MedusaError.Types.NOT_FOUND, `Voucher ${id} was not found`)
+    }
+
+    return this.toCustomerVoucher_(row)
+  }
+
+  private customerVouchersQuery_(knex: ReturnType<SqlEntityManager["getKnex"]>, customerId: string) {
+    return knex("voucher as v")
+      .join("voucher_allocation as a", (join) =>
+        join.on("a.voucher_id", "v.id").andOnNull("a.deleted_at")
+      )
+      .where({ "a.customer_id": customerId, "v.deleted_at": null })
+      .whereIn("v.status", [VoucherStatus.ALLOCATED, VoucherStatus.DELIVERED])
+  }
+
+  private selectCustomerVouchers_(query: ReturnType<VoucherModuleService["customerVouchersQuery_"]>) {
+    return query
+      .clone()
+      .leftJoin("voucher_batch as b", "b.id", "v.batch_id")
+      .leftJoin("voucher_product as p", "p.id", "b.voucher_product_id")
+      .select(
+        "v.id",
+        "v.status",
+        "v.code_hint",
+        "v.variant_id",
+        "v.valid_from",
+        "v.valid_until",
+        "a.order_id",
+        "p.face_value",
+        "p.currency_code",
+        "b.redemption_instructions"
+      )
+  }
+
+  private toCustomerVoucher_(row: Record<string, any>): CustomerVoucher {
+    return {
+      id: row.id,
+      status: row.status,
+      code_hint: row.code_hint,
+      order_id: row.order_id,
+      variant_id: row.variant_id,
+      face_value: Number(row.face_value),
+      currency_code: row.currency_code,
+      first_day: row.valid_from ? dayOf(new Date(row.valid_from), this.timezone_) : null,
+      last_day: row.valid_until ? lastDayOf(new Date(row.valid_until), this.timezone_) : null,
+      redemption_instructions: row.redemption_instructions ?? null,
+    }
   }
 
   /**
