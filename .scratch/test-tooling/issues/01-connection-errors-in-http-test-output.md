@@ -4,7 +4,7 @@
 
 **Blocked by:** none.
 
-**Status:** done (harmless; nothing to change)
+**Status:** done (PR #53; harmless, nothing to change)
 
 - [x] The source of the message is identified
 - [x] Either it no longer appears, or a note here explains why it is expected
