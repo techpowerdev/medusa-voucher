@@ -123,7 +123,7 @@ Empty directories hold a `.gitkeep`; delete it when adding the first real file.
 
 ## Branching
 
-- `main`: released code only. It changes by merging `develop` for a release (then tag the version).
+- `main`: released code only. It changes by merging `develop` for a release (then tag the version). The package is not on npm: for every release, build the tagged commit (`pnpm build`), run `pnpm pack`, attach the `.tgz` to the GitHub Release (`gh release upload v<version> <file>`), and update the URL in README's Installation section. A `github:` install has no code because `.medusa/server` is not committed.
 - `develop`: integration branch. All work lands here through pull requests.
 - `feature/<name>`, `fix/<name>`, `chore/<name>`: short-lived branches created from `develop` and merged back into `develop` by pull request.
 - CI runs on pull requests and on pushes to `main` and `develop`. The `update-medusa.yml` workflow opens its pull request against `develop`.
