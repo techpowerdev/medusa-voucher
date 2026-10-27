@@ -6,7 +6,32 @@ on:
   pull_request:
 
 jobs:
+  # A pull request that changes only docs (Markdown, .scratch/, docs/) skips the test job.
+  # A skipped job still satisfies the required "test" check; pushes to main and develop
+  # always run it.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          code="$(git diff --name-only "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}" \
+            | grep -vE '\.md$|^\.scratch/|^docs/' || true)"
+          echo "Changed files outside docs:"
+          echo "${code:-none}"
+          if [ -n "$code" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; else echo "code=false" >> "$GITHUB_OUTPUT"; fi
+
   test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     services:
       postgres:

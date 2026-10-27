@@ -34,7 +34,7 @@ Package manager: **pnpm** (pinned in `package.json`; use `pnpm`, never `npm`/`ya
   4. While working, keep `pnpm dev` (`medusa plugin:develop`) running in this repo, as Medusa's plugin guide recommends: it publishes when a file changes (not when it starts) and the host's backend restarts by itself; the admin loads this plugin's `src/admin` directly. Run `npx medusa db:migrate` in the host after adding a migration. When done, stop it, check out `develop`, publish and `plugin:add` again (steps 1 and 3).
   5. In `apps/storefront`: `pnpm dev` (store at http://localhost:8000/th; the publishable key is in its `.env.local`). Buy there as a customer, then capture the payment in the admin.
   6. Until delivery starts on its own: `npx medusa exec ./src/scripts/deliver-order-vouchers.ts <order_id>`.
-- CI (`.github/workflows/ci.yml`) runs lint, build, a migration drift check, unit, module and HTTP tests against a PostgreSQL service.
+- CI (`.github/workflows/ci.yml`) runs lint, build, a migration drift check, unit, module and HTTP tests against a PostgreSQL service. A pull request that changes only docs (`*.md`, `.scratch/`, `docs/`) skips them; the skipped `test` job still satisfies the required check. Pushes to `main` and `develop` always run them.
 - `.github/workflows/update-medusa.yml` (from the official Medusa plugin starter, with `actions/checkout` bumped to v4) is a manually triggered workflow that opens a PR bumping the `@medusajs/*` versions (the action detects pnpm and enables corepack). Review that PR: it must keep dev and peer versions in sync and update `pnpm-lock.yaml`.
 
 ## Upgrading Medusa
