@@ -35,8 +35,17 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
 
   const variantId = voucherProduct.product_variant?.id
   const counts = variantId ? (await service.countPool("variant", [variantId])).get(variantId) : undefined
+  const openAllocationFailures = variantId
+    ? (await service.countOpenAllocationFailures([variantId])).get(variantId)
+    : undefined
 
-  res.json({ voucher_product: { ...voucherProduct, counts: counts ?? emptyPoolCounts() } })
+  res.json({
+    voucher_product: {
+      ...voucherProduct,
+      counts: counts ?? emptyPoolCounts(),
+      open_allocation_failures: openAllocationFailures ?? 0,
+    },
+  })
 }
 
 export const POST = async (

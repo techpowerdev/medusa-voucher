@@ -210,6 +210,44 @@ medusaIntegrationTestRunner({
       })
 
       describe("repeated and concurrent runs", () => {
+        // PostgreSQL ends one of two clashing transactions with SQLSTATE 40P01.
+        const deadlock = () =>
+          Object.assign(new Error("deadlock detected"), { name: "DeadlockException", code: "40P01" })
+
+        afterEach(() => jest.restoreAllMocks())
+
+        it("tries again after a deadlock and allocates the order", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "DEADLOCK-0001" }, { code: "DEADLOCK-0002" }])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 2 }])
+          const insert = jest.spyOn(service(), "createVoucherAllocations").mockRejectedValueOnce(deadlock())
+
+          const { result } = await allocate(order.id)
+
+          expect(result.failures).toEqual([])
+          expect(result.allocated).toHaveLength(2)
+          expect(await service().listVoucherAllocations({ order_id: order.id })).toHaveLength(2)
+          expect(insert).toHaveBeenCalledTimes(2)
+        })
+
+        it("gives up after three deadlocks in a row and allocates nothing", async () => {
+          const product = await createVoucherProductVariant(getContainer())
+          await stockVouchers(getContainer(), product, [{ code: "DEADLOCK-0003" }])
+          const order = await createOrder(getContainer(), [{ variant_id: product.variantId, quantity: 1 }])
+          const insert = jest.spyOn(service(), "createVoucherAllocations").mockRejectedValue(deadlock())
+
+          const { errors } = await allocateVouchersToOrderWorkflow(getContainer()).run({
+            input: { order_id: order.id },
+            throwOnError: false,
+          })
+
+          expect(errors[0]?.error?.message).toBe("deadlock detected")
+          expect(insert).toHaveBeenCalledTimes(3)
+          expect(await service().listVoucherAllocations({ order_id: order.id })).toEqual([])
+          const [voucher] = await service().listVouchers({ variant_id: product.variantId })
+          expect(voucher.status).toBe(VoucherStatus.AVAILABLE)
+        })
+
         it("changes nothing when run again for an order that is already fully allocated", async () => {
           const product = await createVoucherProductVariant(getContainer())
           await stockVouchers(getContainer(), product, [

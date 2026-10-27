@@ -18,6 +18,9 @@
     "faceValue": "Face value",
     "empty": "No Voucher products yet. Mark a variant as a Voucher product on its page."
   },
+  "listColumns": {
+    "openAllocationFailures": "Allocation failures"
+  },
   "detail": {
     "pool": "Pool",
     "batches": "Voucher batches",
@@ -34,6 +37,34 @@
     "open": "Open",
     "noBatches": "No Voucher batches yet.",
     "noVouchers": "No Vouchers match."
+  },
+  "failures": {
+    "title": "Allocation failures",
+    "waiting": "Waiting",
+    "settled": "Settled",
+    "email": "Email",
+    "quantity": "Quantity",
+    "requestedAvailable": "Requested {{requested}}, available {{available}}",
+    "date": "Date",
+    "settledAt": "Settled",
+    "settledBy": "By",
+    "note": "Note",
+    "system": "System",
+    "systemNote": "Vouchers allocated",
+    "noneWaiting": "No orders are waiting for Vouchers.",
+    "noneSettled": "No settled orders yet.",
+    "retry": {
+      "action": "Retry waiting orders",
+      "done": "Retry finished",
+      "result": "Got their Vouchers: {{allocated}} · Still waiting: {{still_open}} · Could not be tried: {{failed}}",
+      "noneWaiting": "No orders were waiting for Vouchers."
+    },
+    "resolve": {
+      "action": "Resolve",
+      "description": "Order #{{order}} will stop waiting for Vouchers, and this cannot be undone. Resolving does not refund the customer: refund the order on its order page.",
+      "noteHint": "Say how the order was settled, for example that it was refunded.",
+      "success": "Order #{{order}} resolved"
+    }
   },
   "import": {
     "action": "Import CSV",
@@ -62,7 +93,13 @@
       "code_repeated_in_file": "Line {{line}}: the code repeats an earlier line of the file",
       "code_already_stored": "Line {{line}}: the code is already stored"
     },
-    "moreProblems": "and {{more}} more"
+    "moreProblems": "and {{more}} more",
+    "retry": {
+      "served": "Allocated Vouchers to {{allocated}} waiting orders.",
+      "stillOpen": "{{stillOpen}} orders still wait for Vouchers.",
+      "failed": "{{failed}} orders could not be tried; see the server log.",
+      "notRun": "The waiting orders were not retried. Retry them from this Voucher product's page."
+    }
   },
   "widget": {
     "title": "Voucher product",
@@ -81,5 +118,10 @@
     "faceValueRequired": "Enter a Face value above 0",
     "currencyRequired": "Choose a currency",
     "loadFailed": "Could not load the Voucher product. Reload the page to try again."
+  },
+  "orderWidget": {
+    "title": "Allocation failures",
+    "hint": "This order is paid, but the Pool did not have enough Available Vouchers for it. Import Vouchers and retry, or refund the order and resolve it, on the Voucher product's page.",
+    "loadFailed": "Could not load this order's Allocation failures. Reload the page to try again."
   }
 }

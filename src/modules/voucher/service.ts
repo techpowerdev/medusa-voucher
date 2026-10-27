@@ -92,6 +92,17 @@ function isUniqueViolation(error: unknown): boolean {
   )
 }
 
+// A transaction PostgreSQL aborted to break a deadlock (SQLSTATE 40P01); MikroORM names it
+// DeadlockException.
+function isDeadlock(error: unknown): boolean {
+  const { name, code } = (error ?? {}) as { name?: string; code?: string }
+
+  return name === "DeadlockException" || code === "40P01"
+}
+
+// How many times one allocation run starts when PostgreSQL keeps aborting it as a deadlock.
+const ALLOCATION_DEADLOCK_ATTEMPTS = 3
+
 export type CreateVouchersFromCodesInput = {
   batch_id: string
   vouchers: VoucherCodeInput[]
@@ -296,7 +307,18 @@ class VoucherModuleService extends MedusaService({
     @MedusaContext() sharedContext: Context = {}
   ): Promise<AllocateVouchersResult> {
     try {
-      return await this.allocateVouchers_(input, sharedContext)
+      // PostgreSQL may settle two concurrent runs for the same order by aborting one with a
+      // deadlock instead of a unique violation. Its transaction rolled back, so it starts
+      // again and finds what the other run committed.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          return await this.allocateVouchers_(input, sharedContext)
+        } catch (error) {
+          if (!isDeadlock(error) || attempt >= ALLOCATION_DEADLOCK_ATTEMPTS) {
+            throw error
+          }
+        }
+      }
     } catch (error) {
       // A concurrent run for the same order committed first and a unique index (the unit of
       // a line item, or the open failure of a line) rejected this one, whose transaction
@@ -559,6 +581,37 @@ class VoucherModuleService extends MedusaService({
 
     for (const row of rows) {
       counts.get(row.key)![row.pool_status] = row.total
+    }
+
+    return counts
+  }
+
+  /**
+   * Counts, per Voucher product variant in `variantIds`, the orders waiting for its Vouchers:
+   * those with an open Allocation failure. An order short on several lines of the variant
+   * counts once; resolved failures do not count. A variant without any counts 0.
+   */
+  @InjectManager()
+  async countOpenAllocationFailures(
+    variantIds: string[],
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>(variantIds.map((id) => [id, 0]))
+
+    if (!variantIds.length) {
+      return counts
+    }
+
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const rows: { variant_id: string; orders: number }[] = await knex("voucher_allocation_failure")
+      .select("variant_id", knex.raw("count(distinct order_id)::int as orders"))
+      .whereIn("variant_id", variantIds)
+      .where({ status: AllocationFailureStatus.OPEN })
+      .whereNull("deleted_at")
+      .groupBy("variant_id")
+
+    for (const row of rows) {
+      counts.set(row.variant_id, row.orders)
     }
 
     return counts

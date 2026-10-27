@@ -18,6 +18,9 @@
     "faceValue": "มูลค่าหน้าบัตร",
     "empty": "ยังไม่มี Voucher product กำหนดตัวเลือกสินค้าเป็น Voucher product ได้ที่หน้าของตัวเลือกนั้น"
   },
+  "listColumns": {
+    "openAllocationFailures": "รอ Voucher"
+  },
   "detail": {
     "pool": "Pool",
     "batches": "Voucher batch",
@@ -34,6 +37,34 @@
     "open": "ไม่กำหนด",
     "noBatches": "ยังไม่มี Voucher batch",
     "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข"
+  },
+  "failures": {
+    "title": "คำสั่งซื้อที่รอ Voucher",
+    "waiting": "รอ Voucher",
+    "settled": "จัดการแล้ว",
+    "email": "อีเมล",
+    "quantity": "จำนวน",
+    "requestedAvailable": "สั่ง {{requested}} ใบ มี {{available}} ใบ",
+    "date": "วันที่",
+    "settledAt": "จัดการเมื่อ",
+    "settledBy": "โดย",
+    "note": "บันทึก",
+    "system": "ระบบ",
+    "systemNote": "จัด Voucher ให้แล้ว",
+    "noneWaiting": "ไม่มีคำสั่งซื้อที่รอ Voucher",
+    "noneSettled": "ยังไม่มีคำสั่งซื้อที่จัดการแล้ว",
+    "retry": {
+      "action": "ลองจัด Voucher อีกครั้ง",
+      "done": "ลองจัด Voucher แล้ว",
+      "result": "คำสั่งซื้อที่ได้ Voucher แล้ว {{allocated}} · ยังรอ Voucher {{still_open}} · ลองไม่สำเร็จ {{failed}}",
+      "noneWaiting": "ไม่มีคำสั่งซื้อที่รอ Voucher"
+    },
+    "resolve": {
+      "action": "ทำเครื่องหมายว่าจัดการแล้ว",
+      "description": "คำสั่งซื้อ #{{order}} จะไม่รอ Voucher อีกต่อไป และย้อนกลับไม่ได้ การทำเครื่องหมายนี้ไม่ได้คืนเงินให้ลูกค้า ให้คืนเงินที่หน้าคำสั่งซื้อ",
+      "noteHint": "ระบุว่าจัดการคำสั่งซื้อนี้อย่างไร เช่น คืนเงินแล้ว",
+      "success": "คำสั่งซื้อ #{{order}} จัดการแล้ว"
+    }
   },
   "import": {
     "action": "นำเข้า CSV",
@@ -62,7 +93,13 @@
       "code_repeated_in_file": "บรรทัด {{line}}: รหัสซ้ำกับบรรทัดก่อนหน้าในไฟล์",
       "code_already_stored": "บรรทัด {{line}}: รหัสนี้มีอยู่ในระบบแล้ว"
     },
-    "moreProblems": "และอีก {{more}} รายการ"
+    "moreProblems": "และอีก {{more}} รายการ",
+    "retry": {
+      "served": "จัด Voucher ให้คำสั่งซื้อที่รอ Voucher แล้ว {{allocated}} รายการ",
+      "stillOpen": "ยังมีคำสั่งซื้อที่รอ Voucher อีก {{stillOpen}} รายการ",
+      "failed": "ลองจัด Voucher ไม่ได้ {{failed}} รายการ ดูสาเหตุใน log ของเซิร์ฟเวอร์",
+      "notRun": "ยังไม่ได้ลองจัด Voucher ให้คำสั่งซื้อที่รอ Voucher ลองใหม่ได้จากหน้า Voucher product นี้"
+    }
   },
   "widget": {
     "title": "Voucher product",
@@ -81,5 +118,10 @@
     "faceValueRequired": "ใส่มูลค่าหน้าบัตรที่มากกว่า 0",
     "currencyRequired": "เลือกสกุลเงิน",
     "loadFailed": "โหลดข้อมูล Voucher product ไม่สำเร็จ โหลดหน้าใหม่เพื่อลองอีกครั้ง"
+  },
+  "orderWidget": {
+    "title": "คำสั่งซื้อนี้รอ Voucher",
+    "hint": "คำสั่งซื้อนี้ชำระเงินแล้ว แต่ Pool มี Voucher พร้อมขายไม่พอ นำเข้า Voucher แล้วลองจัดใหม่ หรือคืนเงินแล้วปิดรายการ ได้ที่หน้าของ Voucher product",
+    "loadFailed": "โหลดรายการรอ Voucher ของคำสั่งซื้อนี้ไม่สำเร็จ โหลดหน้าใหม่เพื่อลองอีกครั้ง"
   }
 }

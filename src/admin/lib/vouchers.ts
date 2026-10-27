@@ -1,8 +1,12 @@
+import type { AllocationFailureStatus } from "../../modules/voucher/constants"
 import type { PoolCounts, PoolStatus } from "../../modules/voucher/types"
 import { backendUrl, sdk } from "./client"
+import type { RetryAllocationFailuresResult } from "./allocation-retry"
 import type { ImportFailure, ImportProblem } from "./import-problems"
+import type { ImportAllocationRetry } from "./import-allocation-retry"
 
 export { POOL_STATUSES } from "../../modules/voucher/types"
+export { ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM, AllocationFailureStatus } from "../../modules/voucher/constants"
 export type { PoolCounts, PoolStatus }
 
 // The translation namespace of the plugin's admin pages.
@@ -14,6 +18,8 @@ export type VoucherProduct = {
   currency_code: string
   product_variant: { id: string; title: string; product: { id: string; title: string } }
   counts: PoolCounts
+  // Orders waiting for this Voucher product's Vouchers (an open Allocation failure).
+  open_allocation_failures: number
 }
 
 export type VoucherBatch = {
@@ -59,6 +65,13 @@ export const listPoolVouchers = (
   sdk.client.fetch<{ vouchers: PoolVoucher[]; count: number }>(`/admin/voucher-products/${id}/vouchers`, {
     query,
   })
+
+// An order's open Allocation failures: one per line it is short of, so one page holds them all.
+export const listOrderAllocationFailures = (orderId: string) =>
+  sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
+    "/admin/voucher-allocation-failures",
+    { query: { order_id: orderId, status: "open", limit: 100 } }
+  )
 
 // The Voucher product a variant is marked as, if any, read through the variant's link.
 export const retrieveVariantVoucherProductId = async (productId: string, variantId: string) => {
@@ -123,7 +136,11 @@ export const importVoucherBatch = async (body: ImportVoucherBatchBody) => {
     throw new ImportVoucherBatchError(data.message ?? response.statusText, data.problems, data.problem_count)
   }
 
-  return data as { voucher_batch: { id: string }; imported: number }
+  return data as {
+    voucher_batch: { id: string }
+    imported: number
+    allocation_retry: ImportAllocationRetry
+  }
 }
 
 // The import refuses a file with more rows than this: MAX_CSV_VOUCHERS, kept here so the admin
@@ -138,3 +155,44 @@ export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue"
   delivered: "purple",
   void: "grey",
 }
+
+// An Allocation failure as the admin API lists it; `display_id` and `email` are the order's.
+export type AllocationFailure = {
+  id: string
+  order_id: string
+  order_line_item_id: string
+  voucher_product_id: string | null
+  display_id: number | null
+  email: string | null
+  quantity_requested: number
+  quantity_available: number
+  status: AllocationFailureStatus
+  resolved_at: string | null
+  // The admin user who resolved it, or `system` when its order got its Vouchers.
+  resolved_by: string | null
+  resolution_note: string | null
+  created_at: string
+}
+
+export const listAllocationFailures = (
+  voucherProductId: string,
+  query: Page & { status?: AllocationFailureStatus }
+) =>
+  sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
+    "/admin/voucher-allocation-failures",
+    { query: { ...query, voucher_product_id: voucherProductId } }
+  )
+
+// Tries the waiting orders of a Voucher product again, after its Pool has grown.
+export const retryAllocationFailures = (voucherProductId: string) =>
+  sdk.client.fetch<RetryAllocationFailuresResult>(
+    `/admin/voucher-products/${voucherProductId}/retry-allocation-failures`,
+    { method: "POST" }
+  )
+
+// Closes one waiting order settled another way, such as a refund on the order page.
+export const resolveAllocationFailure = (id: string, note: string) =>
+  sdk.client.fetch<{ voucher_allocation_failure: AllocationFailure }>(
+    `/admin/voucher-allocation-failures/${id}/resolve`,
+    { method: "POST", body: { note } }
+  )

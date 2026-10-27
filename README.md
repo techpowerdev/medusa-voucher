@@ -21,7 +21,7 @@ Requires `@medusajs/medusa` >= 2.21.2 and Node `^20.19.0 || >=22.12.0` (`.nvmrc`
 The plugin is not published to npm yet. Each [GitHub Release](https://github.com/techpowerdev/medusa-voucher/releases) carries the built package as a `.tgz` file; install it by its URL (replace both version numbers with the release you want):
 
 ```bash
-npm install https://github.com/techpowerdev/medusa-voucher/releases/download/v0.3.1/khumkha-medusa-voucher-0.3.1.tgz
+npm install https://github.com/techpowerdev/medusa-voucher/releases/download/v0.4.0/khumkha-medusa-voucher-0.4.0.tgz
 # or: yarn add / pnpm add with the same URL
 ```
 
@@ -60,13 +60,15 @@ npx medusa db:migrate
 A variant delivers Vouchers only when you mark it as a Voucher product (see [ADR-0003](./docs/adr/0003-mark-voucher-products-with-a-linked-model.md)). Sell one Medusa product per partner (for example a supermarket) with a variant per face value, then mark each variant (admin authentication):
 
 - `POST /admin/voucher-products` with `variant_id`, `face_value` and `currency_code` marks a variant. An unknown variant is refused (404) and so is one that is already marked (422).
-- `GET /admin/voucher-products` lists them by Partner (the Medusa product's title), then variant, with the variant and its product (`id`, `title`), `available_vouchers` and `counts` (`limit` and `offset`, 50 by default).
-- `GET /admin/voucher-products/:id` returns one with its variant, the Medusa product and `counts`; an unknown id is refused (404).
+- `GET /admin/voucher-products` lists them by Partner (the Medusa product's title), then variant, with the variant and its product (`id`, `title`), `available_vouchers`, `counts` and `open_allocation_failures` (`limit` and `offset`, 50 by default).
+- `GET /admin/voucher-products/:id` returns one with its variant, the Medusa product, `counts` and `open_allocation_failures`; an unknown id is refused (404).
 - `GET /admin/voucher-products/:id/batches` lists its Voucher batches, newest purchase first, each with `purchased_at`, `purchased_day` (its day in the plugin's `timezone`, as `YYYY-MM-DD`), `unit_cost`, `reference`, `redemption_instructions` and its own `counts` (`limit` and `offset`, 20 by default).
 - `GET /admin/voucher-products/:id/vouchers` lists its Vouchers, soonest to expire first and open-ended last, each with `status` (one of the `counts` names), `code_hint` (the code's last characters, never the code), `batch`, `first_day` and `last_day` (whole days in the plugin's `timezone`, null when open) and the `order` (`id`, `display_id`) it was allocated to. Filter with `status` and `batch_id`; `limit` and `offset`, 20 by default.
 - `POST /admin/voucher-products/:id` changes `face_value` or `currency_code`, only while the Voucher product has no Vouchers.
 
 `counts` is the Pool by what can be done with it: `available` (Vouchers that can still be sold: within their validity and with at least `minimumRemainingValidityDays` left, the same rule allocation uses), `expired` (past their validity), `under_minimum` (still valid but with too little left to be sold), `allocated`, `delivered` and `void`. `available_vouchers` equals `counts.available`; before this it also counted expired and under-minimum Vouchers. The counts are worked out when read, so they are right at any moment; under-minimum is never stored, since it depends on an option you can change.
+
+`open_allocation_failures` is the number of orders waiting for the Voucher product's Vouchers: orders with an open [Allocation failure](#allocation-failures) for it. It counts orders, not units, so an order short on two lines of the same Voucher product counts once; resolved failures do not count. It is worked out when read, like `counts`, and the admin's Vouchers list shows it in the column **Allocation failures** (**รอ Voucher** in Thai).
 
 A scheduled job, `mark-expired-vouchers`, runs every 15 minutes and records as `expired` the Available Vouchers whose validity has ended, logging how many as info. Allocated, Delivered and Void Vouchers keep their status. It needs a server whose `workerMode` is `worker` or `shared`, like the other jobs; the workflow behind it, `markExpiredVouchersWorkflow`, is exported too.
 
@@ -88,13 +90,17 @@ A scheduled job, `recover-unallocated-voucher-orders`, runs every 15 minutes and
 
 ### Allocation failures
 
-When a Voucher product's Pool cannot cover a Paid order, nothing is allocated and an open Allocation failure is recorded for each short line. After importing more Vouchers, an operator retries them (admin authentication):
+When a Voucher product's Pool cannot cover a Paid order, nothing is allocated and an open Allocation failure is recorded for each short line. The store keeps selling a Voucher product whose Pool is empty, so this is how a sale beyond the Pool is settled: by importing more Vouchers and retrying, or by refunding the order and resolving the failure ([ADR-0006](./docs/adr/0006-sell-beyond-the-pool-and-settle-allocation-failures-afterwards.md)). Importing a Voucher batch retries them on its own (see [Importing vouchers](#importing-vouchers)); an operator can also retry them (admin authentication):
 
-- `GET /admin/voucher-allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded.
+- `GET /admin/voucher-allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded, and the order's `display_id` and `email`, read from Medusa's order.
 - `POST /admin/voucher-products/:id/retry-allocation-failures` tries each order waiting on that Voucher product once, oldest first, with the same all-or-none rule and the Paid order check as a new order, and returns `{ allocated, still_open, failed }` (order ids). An order also short on another Voucher product, or refunded or canceled while it waited, stays open. An order whose allocation throws is logged as an error and listed in `failed`; the others are still tried.
 - `POST /admin/voucher-allocation-failures/:id/resolve` with a `note` closes one failure settled another way (a refund, for example) and records the admin and the time. A failure already resolved is refused (422); an unknown one is 404.
 
 An order that gets its Vouchers by any route (a retry, a subscriber or the recovery job) has its open failures resolved automatically, with `resolved_by` set to `system`.
+
+In the admin, each Voucher product's page shows these orders after its Pool, in a section called "Allocation failures" ("คำสั่งซื้อที่รอ Voucher" in Thai), with a filter between waiting and settled orders. A waiting order shows its display number linking to the order, the customer's email, the units requested and available when it failed, and the date, oldest first; a settled one shows when it was settled, by which admin or by the system, and the note. "Retry waiting orders" in the section's header runs the retry above for that Voucher product and says how many orders got their Vouchers, still wait and could not be tried. Each waiting order's menu has "Resolve", which asks for a required note and reminds that resolving does not refund the customer (refund the order on Medusa's order page); a resolved order moves to the settled ones and cannot be reopened.
+
+In the admin, an order's page shows an **Allocation failures** box (Thai: "คำสั่งซื้อนี้รอ Voucher") while the order has an open Allocation failure: each Voucher product it is short of, by its Medusa product and variant, with the units requested and available and a link to the Voucher product's page, where the order can be settled. It has no actions and shows nothing for other orders. It reads `GET /admin/voucher-allocation-failures?order_id=…`, which lists only that order's failures.
 
 Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 
@@ -132,9 +138,13 @@ options: {
 },
 ```
 
-Without it, the order's own shipping method is used; with neither, the fulfillment fails. At startup the id can only be checked to be a non-empty string, so a wrong id shows up as a failed fulfillment. A fulfillment that fails is logged as an error with the order id and the reason; the Delivery stays `delivered` and the email is never sent again for it. The `retry-voucher-deliveries` job records it later for orders delivered in the last 7 days, and skips an order canceled meanwhile without logging it again.
+Without it, the order's own shipping method is used; with neither, the fulfillment fails. At startup the id can only be checked to be a non-empty string, so a wrong id shows up as a failed fulfillment, logged as `Shipping option <id>, set in the "delivery.fulfillment.shippingOptionId" option, was not found` (or `from the shipping method of order <id>` when the order's own method points to a removed option). A fulfillment that fails is logged as an error with the order id and the reason; the Delivery stays `delivered` and the email is never sent again for it. The `retry-voucher-deliveries` job records it later for orders delivered in the last 7 days, and skips an order canceled meanwhile without logging it again.
 
-Recommended Voucher product setup: no shipping profile and inventory management off. A cart of such products completes without a shipping method, and the fulfillment needs no stock reservation. A Voucher product that does require shipping still works, using the order's shipping method or your option when their shipping profiles match.
+Recommended Voucher product setup: no shipping profile and inventory management off, as Medusa's [Configure Selling Products](https://docs.medusajs.com/resources/commerce-modules/product/selling-products) guide describes for digital products. Medusa then marks the line as not requiring shipping, so a cart of such products completes without a shipping method, and the fulfillment needs no stock reservation. Such an order has no shipping method to fall back on, so set `shippingOptionId`. A Voucher product that does require shipping still works, using the order's shipping method or your option when their shipping profiles match.
+
+- Inventory management gives the variant an inventory item, whose `requires_shipping` (true by default) then decides instead of the shipping profile. If you turn it on, set that to false as well, or the line requires shipping without a shipping profile. The plugin does not keep that stock in step with the Pool (see below).
+- Medusa offers shipping options to any cart with a shipping address, whether or not a line requires shipping. Hide the delivery step in your storefront's checkout when no line has `requires_shipping`, or a customer buying only Vouchers can choose, and pay for, a parcel option. Your Voucher shipping option need not be offered in the store at all.
+- With inventory management off, Medusa never shows a Voucher product as sold out: a customer can buy it while its Pool is empty, and the order becomes an Allocation failure to settle afterwards ([ADR-0006](./docs/adr/0006-sell-beyond-the-pool-and-settle-allocation-failures-afterwards.md)).
 
 Medusa refuses to cancel an order with a fulfillment that is not canceled, and refuses to cancel a delivered fulfillment, so once an order's Vouchers are delivered the order can no longer be canceled. Refund it instead (Medusa refunds a payment without a return); the customer already holds the codes.
 
@@ -227,6 +237,8 @@ const { voucher } = await sdk.client.fetch(`/store/customers/me/vouchers/${vouch
 ## Importing vouchers
 
 `POST /admin/voucher-batches/import` (admin authentication) creates a Voucher batch and stores the vouchers in a CSV file for it. The body is JSON: `voucher_product_id` (an existing Voucher product, see above; an unknown one is refused with 404), `purchased_at`, optional `unit_cost`, `reference` and `redemption_instructions`, and `csv` (the file's text). The batch stores only these per-purchase details: the Face value and currency are the Voucher product's, and the Partner is not stored because the Medusa product already says whose voucher it is. The response is the batch and the number imported (`imported`), never the codes.
+
+Once the batch is stored, the import retries the orders waiting for that Voucher product's Vouchers (its open Allocation failures) with the same retry as `POST /admin/voucher-products/:id/retry-allocation-failures`: oldest first, all or none per order, and only for Paid orders, so an order refunded or canceled while it waited stays open. The response adds its result as `allocation_retry`, `{ allocated, still_open, failed }` (order ids, each empty when no order was waiting). If the retry fails as a whole, the Vouchers stay imported, the error is logged and `allocation_retry` is `null`: retry the waiting orders later from the Voucher product. The admin's import dialog says how many waiting orders it served, or that the retry did not run.
 
 `purchased_at` is either a day alone, `YYYY-MM-DD`, stored as 00:00 of that day in the plugin's `timezone` option (so `2026-10-01` in `Asia/Bangkok` is `2026-09-30T17:00:00.000Z`), or a date and time (ISO 8601), stored as given. A day that does not exist, such as `2026-02-30`, is refused (400). The admin's import dialog sends the day chosen. Before this, a day alone was stored as 00:00 UTC; batches already stored keep their `purchased_at`.
 
