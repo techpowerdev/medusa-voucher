@@ -60,6 +60,21 @@ medusaIntegrationTestRunner({
           expect(JSON.stringify(response.data)).not.toMatch(/SECRET-|code_encrypted|pin_encrypted|code_hash/)
         })
 
+        it("shows each failure's order display number and the customer's email, as Medusa keeps them", async () => {
+          const { order } = await waitingOrder("100", 1, 0)
+
+          const response = await api.get("/admin/voucher-allocation-failures", headers)
+
+          expect(response.data.voucher_allocation_failures).toEqual([
+            expect.objectContaining({
+              order_id: order.id,
+              display_id: order.display_id,
+              email: "customer@example.test",
+            }),
+          ])
+          expect(JSON.stringify(response.data)).not.toMatch(/SECRET-|code_encrypted|pin_encrypted|code_hash/)
+        })
+
         it("lists only the failures of the Voucher product asked for", async () => {
           await waitingOrder("100", 2, 0)
           const { product, order } = await waitingOrder("200", 2, 0)

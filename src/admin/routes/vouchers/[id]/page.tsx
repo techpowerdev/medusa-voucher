@@ -1,7 +1,8 @@
 import { DataTable } from "@medusajs/dashboard/components"
-import { useDate, useQueryParams } from "@medusajs/dashboard/hooks"
+import { useDate, useQueryParams, useUser } from "@medusajs/dashboard/hooks"
 import { getLocaleAmount } from "@medusajs/dashboard/lib"
 import {
+  Avatar,
   Container,
   createDataTableColumnHelper,
   createDataTableFilterHelper,
@@ -14,6 +15,10 @@ import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, Outlet, UIMatch, useParams } from "react-router-dom"
 import {
+  ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM,
+  AllocationFailure,
+  AllocationFailureStatus,
+  listAllocationFailures,
   listPoolVouchers,
   listVoucherBatches,
   POOL_STATUSES,
@@ -33,10 +38,13 @@ const BATCH_FILTER_SIZE = 100
 // Each table keeps its page and filters in the URL under its own prefix.
 const BATCHES_PREFIX = "b"
 const VOUCHERS_PREFIX = "v"
+const FAILURES_PREFIX = "f"
 
 const batchColumns = createDataTableColumnHelper<VoucherBatch>()
 const voucherColumns = createDataTableColumnHelper<PoolVoucher>()
 const voucherFilters = createDataTableFilterHelper<{ status: PoolStatus; batch_id: string }>()
+const failureColumns = createDataTableColumnHelper<AllocationFailure>()
+const failureFilters = createDataTableFilterHelper<{ status: AllocationFailureStatus }>()
 
 const useVoucherProduct = (id: string) =>
   useQuery({
@@ -274,6 +282,151 @@ const VouchersSection = ({ voucherProduct }: { voucherProduct: VoucherProduct })
   )
 }
 
+// Who settled an Allocation failure: the system when its order got its Vouchers, otherwise the
+// admin user, shown by name as the dashboard shows who revoked an API key.
+const ResolvedBy = ({ actor }: { actor: string | null }) => {
+  const { t } = useTranslation(VOUCHER_NS)
+  const isUser = !!actor && actor !== ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM
+  const { user, isError, error } = useUser(actor!, undefined, { enabled: isUser })
+
+  if (isError) {
+    throw error
+  }
+
+  if (actor === ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM) {
+    return t("failures.system")
+  }
+
+  if (!user) {
+    return "-"
+  }
+
+  const name = [user.first_name, user.last_name].filter(Boolean).join(" ") || user.email
+
+  return (
+    <Link to={`/settings/users/${user.id}`} className="flex w-fit items-center gap-x-2 hover:underline">
+      <Avatar size="2xsmall" fallback={name.slice(0, 1).toUpperCase()} />
+      {name}
+    </Link>
+  )
+}
+
+const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
+  const { t } = useTranslation(VOUCHER_NS)
+  const { getFullDate } = useDate()
+  const { offset, status } = useQueryParams(["offset", "status"], FAILURES_PREFIX)
+  // Without a filter the section shows the orders still waiting, as the API does.
+  const failureStatus = filterValue<AllocationFailureStatus>(status) ?? AllocationFailureStatus.OPEN
+
+  const { data, isPending, isError, error } = useQuery({
+    queryKey: ["voucher-allocation-failures", voucherProduct.id, offset, failureStatus],
+    queryFn: () =>
+      listAllocationFailures(voucherProduct.id, {
+        limit: PAGE_SIZE,
+        offset: offset ? parseInt(offset) : 0,
+        status: failureStatus,
+      }),
+    placeholderData: keepPreviousData,
+  })
+
+  const filters = useMemo(
+    () => [
+      failureFilters.accessor("status", {
+        type: "radio",
+        label: t("detail.status"),
+        options: [
+          { label: t("failures.waiting"), value: AllocationFailureStatus.OPEN },
+          { label: t("failures.settled"), value: AllocationFailureStatus.RESOLVED },
+        ],
+      }),
+    ],
+    [t]
+  )
+
+  const columns = useMemo(
+    () => [
+      failureColumns.accessor("display_id", {
+        header: t("detail.order"),
+        cell: ({ row }) => (
+          <Link to={`/orders/${row.original.order_id}`} className="text-ui-fg-interactive hover:underline">
+            #{row.original.display_id ?? row.original.order_id}
+          </Link>
+        ),
+      }),
+      failureColumns.accessor("email", {
+        header: t("failures.email"),
+        cell: ({ getValue }) => getValue() ?? "-",
+      }),
+      ...(failureStatus === AllocationFailureStatus.OPEN
+        ? [
+            failureColumns.display({
+              id: "quantity",
+              header: t("failures.quantity"),
+              cell: ({ row }) =>
+                t("failures.requestedAvailable", {
+                  requested: row.original.quantity_requested,
+                  available: row.original.quantity_available,
+                }),
+            }),
+            failureColumns.accessor("created_at", {
+              header: t("failures.date"),
+              cell: ({ getValue }) => getFullDate({ date: getValue(), includeTime: true }),
+            }),
+          ]
+        : [
+            failureColumns.accessor("resolved_at", {
+              header: t("failures.settledAt"),
+              cell: ({ getValue }) => {
+                const resolvedAt = getValue()
+
+                return resolvedAt ? getFullDate({ date: resolvedAt, includeTime: true }) : "-"
+              },
+            }),
+            failureColumns.accessor("resolved_by", {
+              header: t("failures.settledBy"),
+              cell: ({ getValue }) => <ResolvedBy actor={getValue()} />,
+            }),
+            failureColumns.accessor("resolution_note", {
+              header: t("failures.note"),
+              cell: ({ getValue }) => getValue() ?? "-",
+            }),
+          ]),
+    ],
+    [t, getFullDate, failureStatus]
+  )
+
+  if (isError) {
+    throw error
+  }
+
+  return (
+    <Container className="divide-y p-0">
+      <DataTable
+        data={data?.voucher_allocation_failures}
+        columns={columns}
+        filters={filters}
+        rowCount={data?.count}
+        getRowId={(failure) => failure.id}
+        pageSize={PAGE_SIZE}
+        enableSearch={false}
+        prefix={FAILURES_PREFIX}
+        isLoading={isPending}
+        heading={t("failures.title")}
+        headingLevel="h2"
+        emptyState={{
+          empty: { heading: t("failures.noneWaiting") },
+          filtered: {
+            heading:
+              failureStatus === AllocationFailureStatus.OPEN
+                ? t("failures.noneWaiting")
+                : t("failures.noneSettled"),
+          },
+        }}
+      />
+    </Container>
+  )
+}
+
 const VoucherProductPage = () => {
   const { t } = useTranslation(VOUCHER_NS)
   const { id } = useParams()
@@ -302,6 +455,7 @@ const VoucherProductPage = () => {
         </Text>
       </Container>
       <PoolSection counts={voucherProduct.counts} />
+      <AllocationFailuresSection voucherProduct={voucherProduct} />
       <BatchesSection voucherProduct={voucherProduct} />
       <VouchersSection voucherProduct={voucherProduct} />
       {/* The import dialog opens over the page. */}

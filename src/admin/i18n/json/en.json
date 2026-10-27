@@ -35,6 +35,21 @@
     "noBatches": "No Voucher batches yet.",
     "noVouchers": "No Vouchers match."
   },
+  "failures": {
+    "title": "Allocation failures",
+    "waiting": "Waiting",
+    "settled": "Settled",
+    "email": "Email",
+    "quantity": "Quantity",
+    "requestedAvailable": "Requested {{requested}}, available {{available}}",
+    "date": "Date",
+    "settledAt": "Settled",
+    "settledBy": "By",
+    "note": "Note",
+    "system": "System",
+    "noneWaiting": "No orders are waiting for Vouchers.",
+    "noneSettled": "No settled orders yet."
+  },
   "import": {
     "action": "Import CSV",
     "title": "Import Vouchers",

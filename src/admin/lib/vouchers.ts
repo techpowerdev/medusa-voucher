@@ -1,8 +1,10 @@
+import type { AllocationFailureStatus } from "../../modules/voucher/constants"
 import type { PoolCounts, PoolStatus } from "../../modules/voucher/types"
 import { backendUrl, sdk } from "./client"
 import type { ImportFailure, ImportProblem } from "./import-problems"
 
 export { POOL_STATUSES } from "../../modules/voucher/types"
+export { ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM, AllocationFailureStatus } from "../../modules/voucher/constants"
 export type { PoolCounts, PoolStatus }
 
 // The translation namespace of the plugin's admin pages.
@@ -138,3 +140,28 @@ export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue"
   delivered: "purple",
   void: "grey",
 }
+
+// An Allocation failure as the admin API lists it; `display_id` and `email` are the order's.
+export type AllocationFailure = {
+  id: string
+  order_id: string
+  display_id: number | null
+  email: string | null
+  quantity_requested: number
+  quantity_available: number
+  status: AllocationFailureStatus
+  resolved_at: string | null
+  // The admin user who resolved it, or `system` when its order got its Vouchers.
+  resolved_by: string | null
+  resolution_note: string | null
+  created_at: string
+}
+
+export const listAllocationFailures = (
+  voucherProductId: string,
+  query: Page & { status?: AllocationFailureStatus }
+) =>
+  sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
+    "/admin/voucher-allocation-failures",
+    { query: { ...query, voucher_product_id: voucherProductId } }
+  )

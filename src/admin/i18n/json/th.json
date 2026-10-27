@@ -35,6 +35,21 @@
     "noBatches": "ยังไม่มี Voucher batch",
     "noVouchers": "ไม่มี Voucher ที่ตรงเงื่อนไข"
   },
+  "failures": {
+    "title": "คำสั่งซื้อที่รอ Voucher",
+    "waiting": "รอ Voucher",
+    "settled": "จัดการแล้ว",
+    "email": "อีเมล",
+    "quantity": "จำนวน",
+    "requestedAvailable": "สั่ง {{requested}} ใบ มี {{available}} ใบ",
+    "date": "วันที่",
+    "settledAt": "จัดการเมื่อ",
+    "settledBy": "โดย",
+    "note": "บันทึก",
+    "system": "ระบบ",
+    "noneWaiting": "ไม่มีคำสั่งซื้อที่รอ Voucher",
+    "noneSettled": "ยังไม่มีคำสั่งซื้อที่จัดการแล้ว"
+  },
   "import": {
     "action": "นำเข้า CSV",
     "title": "นำเข้า Voucher",
