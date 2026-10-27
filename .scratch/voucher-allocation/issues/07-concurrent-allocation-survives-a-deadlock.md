@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent (approved by the user on 2026-10-27, Q17)
+**Status:** done (PR #62)
 
 ## What happens today
 
@@ -18,7 +18,11 @@
 
 ## Acceptance criteria
 
-- [ ] A deadlock during allocation is retried and the run returns the order's Allocations (test forcing a deadlock error once, e.g. `jest.spyOn` on the insert, so it does not depend on timing)
-- [ ] After the maximum tries the deadlock error is thrown (test)
-- [ ] The existing concurrent test passes repeatedly (run the file several times; report the count)
-- [ ] Only allocation is affected; imports keep their own unique-violation handling
+- [x] A deadlock during allocation is retried and the run returns the order's Allocations (test forcing a deadlock error once, e.g. `jest.spyOn` on the insert, so it does not depend on timing)
+- [x] After the maximum tries the deadlock error is thrown (test)
+- [x] The existing concurrent test passes repeatedly (run the file several times; report the count)
+- [x] Only allocation is affected; imports keep their own unique-violation handling
+
+## Comments
+
+- 2026-10-27, PR #62: retried up to 3 times on SQLSTATE 40P01. The first test (one deadlock, then allocated) went red first; the second (three deadlocks, nothing allocated) passed on its first run. `voucher-allocation.spec.ts` passed 10 runs out of 10; full HTTP suite 152/152 run alone.
