@@ -101,7 +101,6 @@
   "orderWidget": {
     "title": "Allocation failures",
     "hint": "This order is paid, but the Pool did not have enough Available Vouchers for it. Import Vouchers and retry, or refund the order and resolve it, on the Voucher product's page.",
-    "units": "Requested {{requested}}, available {{available}}",
     "loadFailed": "Could not load this order's Allocation failures. Reload the page to try again."
   }
 }

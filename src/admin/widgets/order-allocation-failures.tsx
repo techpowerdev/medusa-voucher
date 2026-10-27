@@ -21,7 +21,7 @@ const voucherProductName = (failure: AllocationFailure, order: HttpTypes.AdminOr
 
 const FailureRow = ({ failure, order }: { failure: AllocationFailure; order: HttpTypes.AdminOrder }) => {
   const { t, i18n } = useTranslation(VOUCHER_NS)
-  const units = t("orderWidget.units", {
+  const units = t("failures.requestedAvailable", {
     requested: failure.quantity_requested.toLocaleString(i18n.language),
     available: failure.quantity_available.toLocaleString(i18n.language),
   })

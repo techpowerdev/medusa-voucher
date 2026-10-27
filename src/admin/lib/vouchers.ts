@@ -62,15 +62,6 @@ export const listPoolVouchers = (
     query,
   })
 
-export type AllocationFailure = {
-  id: string
-  order_id: string
-  order_line_item_id: string
-  voucher_product_id: string | null
-  quantity_requested: number
-  quantity_available: number
-}
-
 // An order's open Allocation failures: one per line it is short of, so one page holds them all.
 export const listOrderAllocationFailures = (orderId: string) =>
   sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
@@ -161,6 +152,8 @@ export const statusColor: Record<PoolStatus, "green" | "red" | "orange" | "blue"
 export type AllocationFailure = {
   id: string
   order_id: string
+  order_line_item_id: string
+  voucher_product_id: string | null
   display_id: number | null
   email: string | null
   quantity_requested: number
