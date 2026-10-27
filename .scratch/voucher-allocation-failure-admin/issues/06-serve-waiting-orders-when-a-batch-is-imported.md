@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] Importing a batch for a Voucher product with waiting orders allocates them oldest first and returns the retry result (HTTP test)
-- [ ] An order refunded or canceled while it waited stays open after the import (HTTP test)
-- [ ] When the retry is forced to throw (`jest.spyOn`), the Vouchers are still stored and the response says the retry did not run (HTTP test)
-- [ ] The import dialog shows the result in English and Thai
-- [ ] README's import section documents the retry and the new response field
+- [x] Importing a batch for a Voucher product with waiting orders allocates them oldest first and returns the retry result (HTTP test)
+- [x] An order refunded or canceled while it waited stays open after the import (HTTP test)
+- [x] When the retry is forced to throw (`jest.spyOn`), the Vouchers are still stored and the response says the retry did not run (HTTP test)
+- [x] The import dialog shows the result in English and Thai
+- [x] README's import section documents the retry and the new response field
 - [ ] Checked on the dev host with screenshots: an import that serves a waiting order, then the Voucher product page and the email in Mailpit (rule 13)

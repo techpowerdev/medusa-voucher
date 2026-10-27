@@ -2,6 +2,7 @@ import type { AllocationFailureStatus } from "../../modules/voucher/constants"
 import type { PoolCounts, PoolStatus } from "../../modules/voucher/types"
 import { backendUrl, sdk } from "./client"
 import type { ImportFailure, ImportProblem } from "./import-problems"
+import type { ImportAllocationRetry } from "./import-allocation-retry"
 
 export { POOL_STATUSES } from "../../modules/voucher/types"
 export { ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM, AllocationFailureStatus } from "../../modules/voucher/constants"
@@ -125,7 +126,11 @@ export const importVoucherBatch = async (body: ImportVoucherBatchBody) => {
     throw new ImportVoucherBatchError(data.message ?? response.statusText, data.problems, data.problem_count)
   }
 
-  return data as { voucher_batch: { id: string }; imported: number }
+  return data as {
+    voucher_batch: { id: string }
+    imported: number
+    allocation_retry: ImportAllocationRetry
+  }
 }
 
 // The import refuses a file with more rows than this: MAX_CSV_VOUCHERS, kept here so the admin

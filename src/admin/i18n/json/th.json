@@ -78,7 +78,13 @@
       "code_repeated_in_file": "บรรทัด {{line}}: รหัสซ้ำกับบรรทัดก่อนหน้าในไฟล์",
       "code_already_stored": "บรรทัด {{line}}: รหัสนี้มีอยู่ในระบบแล้ว"
     },
-    "moreProblems": "และอีก {{more}} รายการ"
+    "moreProblems": "และอีก {{more}} รายการ",
+    "retry": {
+      "served": "จัด Voucher ให้คำสั่งซื้อที่รอ Voucher แล้ว {{allocated}} รายการ",
+      "stillOpen": "ยังมีคำสั่งซื้อที่รอ Voucher อีก {{stillOpen}} รายการ",
+      "failed": "ลองจัด Voucher ไม่ได้ {{failed}} รายการ ดูสาเหตุใน log ของเซิร์ฟเวอร์",
+      "notRun": "ยังไม่ได้ลองจัด Voucher ให้คำสั่งซื้อที่รอ Voucher ลองใหม่ได้จากหน้า Voucher product นี้"
+    }
   },
   "widget": {
     "title": "Voucher product",
