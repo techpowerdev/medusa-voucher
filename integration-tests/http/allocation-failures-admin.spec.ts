@@ -89,6 +89,23 @@ medusaIntegrationTestRunner({
           ])
         })
 
+        it("lists only the failures of the order asked for", async () => {
+          await waitingOrder("100", 2, 0)
+          const { product, order } = await waitingOrder("200", 3, 1)
+
+          const response = await api.get(`/admin/voucher-allocation-failures?order_id=${order.id}`, headers)
+
+          expect(response.data.voucher_allocation_failures).toEqual([
+            expect.objectContaining({
+              order_id: order.id,
+              voucher_product_id: product.voucherProductId,
+              quantity_requested: 3,
+              quantity_available: 1,
+            }),
+          ])
+          expect(response.data.count).toBe(1)
+        })
+
         it("refuses a request without an admin session", async () => {
           const response = await api.get("/admin/voucher-allocation-failures").catch((error) => error.response)
 

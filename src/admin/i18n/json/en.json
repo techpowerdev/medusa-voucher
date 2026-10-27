@@ -97,5 +97,10 @@
     "faceValueRequired": "Enter a Face value above 0",
     "currencyRequired": "Choose a currency",
     "loadFailed": "Could not load the Voucher product. Reload the page to try again."
+  },
+  "orderWidget": {
+    "title": "Allocation failures",
+    "hint": "This order is paid, but the Pool did not have enough Available Vouchers for it. Import Vouchers and retry, or refund the order and resolve it, on the Voucher product's page.",
+    "loadFailed": "Could not load this order's Allocation failures. Reload the page to try again."
   }
 }
