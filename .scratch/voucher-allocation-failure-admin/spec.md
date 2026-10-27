@@ -1,6 +1,6 @@
 # Spec: Allocation failures in the admin
 
-**Status:** ready-for-agent
+**Status:** done (tickets 01–06: PRs #57, #59, #63, #61, #58, #60)
 
 ## Problem Statement
 
