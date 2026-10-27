@@ -43,6 +43,10 @@ const VouchersPage = () => {
       count("under_minimum"),
       count("allocated"),
       count("delivered"),
+      columnHelper.accessor("open_allocation_failures", {
+        header: t("listColumns.openAllocationFailures"),
+        cell: ({ row }) => row.original.open_allocation_failures.toLocaleString(i18n.language),
+      }),
     ]
   }, [t, i18n.language])
 

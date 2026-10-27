@@ -587,6 +587,37 @@ class VoucherModuleService extends MedusaService({
   }
 
   /**
+   * Counts, per Voucher product variant in `variantIds`, the orders waiting for its Vouchers:
+   * those with an open Allocation failure. An order short on several lines of the variant
+   * counts once; resolved failures do not count. A variant without any counts 0.
+   */
+  @InjectManager()
+  async countOpenAllocationFailures(
+    variantIds: string[],
+    @MedusaContext() sharedContext: Context = {}
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>(variantIds.map((id) => [id, 0]))
+
+    if (!variantIds.length) {
+      return counts
+    }
+
+    const knex = (sharedContext.manager as SqlEntityManager).getKnex()
+    const rows: { variant_id: string; orders: number }[] = await knex("voucher_allocation_failure")
+      .select("variant_id", knex.raw("count(distinct order_id)::int as orders"))
+      .whereIn("variant_id", variantIds)
+      .where({ status: AllocationFailureStatus.OPEN })
+      .whereNull("deleted_at")
+      .groupBy("variant_id")
+
+    for (const row of rows) {
+      counts.set(row.variant_id, row.orders)
+    }
+
+    return counts
+  }
+
+  /**
    * One page of a customer's own Vouchers, newest Allocation first, optionally of one order,
    * with the total that match: those Allocated or Delivered to an order of `customer_id`
    * (recorded on the Allocation), never Void. Never a code.

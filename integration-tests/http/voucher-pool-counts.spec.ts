@@ -153,6 +153,72 @@ medusaIntegrationTestRunner({
         expect(exactly?.allocated).toHaveLength(expectedCounts.available)
       })
 
+      describe("orders with an open Allocation failure", () => {
+        // A Paid order for the given lines, allocated while the Pool cannot cover it.
+        const waitingOrder = async (lines: { variant_id: string; quantity: number }[]) => {
+          const order = await createOrder(getContainer(), lines)
+          const units = lines.reduce((sum, line) => sum + line.quantity, 0)
+          await payOrderInFull(getContainer(), order.id, units * 100)
+          await allocateVouchersForPaidOrderWorkflow(getContainer()).run({ input: { order_id: order.id } })
+
+          return order
+        }
+
+        const resolveFailuresOf = async (orderId: string) => {
+          for (const failure of await service().listVoucherAllocationFailures({ order_id: orderId })) {
+            await service().resolveAllocationFailure({ id: failure.id, note: "Refunded", resolved_by: "user_test" })
+          }
+        }
+
+        it("counts a Voucher product's waiting orders once each, leaving out resolved ones", async () => {
+          const product = await createVoucherProductVariant(getContainer(), "100")
+          // Short on two lines of the same Voucher product: one order.
+          await waitingOrder([
+            { variant_id: product.variantId, quantity: 2 },
+            { variant_id: product.variantId, quantity: 1 },
+          ])
+          await waitingOrder([{ variant_id: product.variantId, quantity: 3 }])
+          const refunded = await waitingOrder([{ variant_id: product.variantId, quantity: 1 }])
+          await resolveFailuresOf(refunded.id)
+
+          const response = await api.get(`/admin/voucher-products/${product.voucherProductId}`, headers)
+
+          expect(response.status).toBe(200)
+          expect(response.data.voucher_product.open_allocation_failures).toBe(2)
+        })
+
+        it("lists each Voucher product with its own waiting orders", async () => {
+          const shortOnBoth = await createVoucherProductVariant(getContainer(), "100")
+          const alsoShort = await createVoucherProductVariant(getContainer(), "200")
+          const stocked = await createVoucherProductVariant(getContainer(), "300")
+          await stockVouchers(getContainer(), stocked, [{ code: "POOL-300" }])
+          // One order short on two lines of the first Voucher product and one of the second.
+          await waitingOrder([
+            { variant_id: shortOnBoth.variantId, quantity: 2 },
+            { variant_id: shortOnBoth.variantId, quantity: 1 },
+            { variant_id: alsoShort.variantId, quantity: 1 },
+          ])
+          const refunded = await waitingOrder([{ variant_id: alsoShort.variantId, quantity: 1 }])
+          await resolveFailuresOf(refunded.id)
+
+          const response = await api.get("/admin/voucher-products", headers)
+
+          const waiting = Object.fromEntries(
+            response.data.voucher_products.map(
+              (voucherProduct: { id: string; open_allocation_failures: number }) => [
+                voucherProduct.id,
+                voucherProduct.open_allocation_failures,
+              ]
+            )
+          )
+          expect(waiting).toEqual({
+            [shortOnBoth.voucherProductId]: 1,
+            [alsoShort.voucherProductId]: 1,
+            [stocked.voucherProductId]: 0,
+          })
+        })
+      })
+
       it("refuses an unknown Voucher product", async () => {
         const response = await api
           .get("/admin/voucher-products/vprod_unknown", headers)
