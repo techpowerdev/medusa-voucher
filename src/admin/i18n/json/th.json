@@ -18,6 +18,9 @@
     "faceValue": "มูลค่าหน้าบัตร",
     "empty": "ยังไม่มี Voucher product กำหนดตัวเลือกสินค้าเป็น Voucher product ได้ที่หน้าของตัวเลือกนั้น"
   },
+  "listColumns": {
+    "openAllocationFailures": "รอ Voucher"
+  },
   "detail": {
     "pool": "Pool",
     "batches": "Voucher batch",

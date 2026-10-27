@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (PR #61)
 
-- [ ] `GET /admin/voucher-products` and `GET /admin/voucher-products/:id` return the number of waiting orders; an order short on two lines of the same Voucher product counts once; resolved failures do not count (HTTP tests in `voucher-pool-counts.spec.ts`)
-- [ ] The list page shows the column in English and Thai
-- [ ] README documents the new field
-- [ ] Checked on the dev host with a screenshot (rule 13)
+- [x] `GET /admin/voucher-products` and `GET /admin/voucher-products/:id` return the number of waiting orders; an order short on two lines of the same Voucher product counts once; resolved failures do not count (HTTP tests in `voucher-pool-counts.spec.ts`)
+- [x] The list page shows the column in English and Thai
+- [x] README documents the new field
+- [x] Checked on the dev host with a screenshot (rule 13)

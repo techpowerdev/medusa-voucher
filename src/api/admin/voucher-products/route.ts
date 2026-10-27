@@ -42,15 +42,23 @@ export const GET = async (req: AuthenticatedMedusaRequest, res: MedusaResponse) 
     .slice(skip, take === undefined ? undefined : skip + take)
 
   // `available_vouchers` is the Available count (Vouchers that can still be sold); `counts`
-  // has the rest of the Pool, read in one query for the page.
-  const counts = await service.countPool(
-    "variant",
-    data.map((voucherProduct) => voucherProduct.product_variant?.id).filter((id): id is string => !!id)
-  )
+  // has the rest of the Pool, read in one query for the page. `open_allocation_failures` is
+  // the number of orders waiting for Vouchers, also read in one query for the page.
+  const variantIds = data
+    .map((voucherProduct) => voucherProduct.product_variant?.id)
+    .filter((id): id is string => !!id)
+  const counts = await service.countPool("variant", variantIds)
+  const waiting = await service.countOpenAllocationFailures(variantIds)
   const voucherProducts = data.map((voucherProduct) => {
-    const pool = counts.get(voucherProduct.product_variant?.id ?? "") ?? emptyPoolCounts()
+    const variantId = voucherProduct.product_variant?.id ?? ""
+    const pool = counts.get(variantId) ?? emptyPoolCounts()
 
-    return { ...voucherProduct, available_vouchers: pool.available, counts: pool }
+    return {
+      ...voucherProduct,
+      available_vouchers: pool.available,
+      counts: pool,
+      open_allocation_failures: waiting.get(variantId) ?? 0,
+    }
   })
 
   res.json({

@@ -16,6 +16,8 @@ export type VoucherProduct = {
   currency_code: string
   product_variant: { id: string; title: string; product: { id: string; title: string } }
   counts: PoolCounts
+  // Orders waiting for this Voucher product's Vouchers (an open Allocation failure).
+  open_allocation_failures: number
 }
 
 export type VoucherBatch = {

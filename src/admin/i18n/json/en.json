@@ -18,6 +18,9 @@
     "faceValue": "Face value",
     "empty": "No Voucher products yet. Mark a variant as a Voucher product on its page."
   },
+  "listColumns": {
+    "openAllocationFailures": "Allocation failures"
+  },
   "detail": {
     "pool": "Pool",
     "batches": "Voucher batches",
