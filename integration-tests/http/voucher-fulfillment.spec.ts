@@ -157,6 +157,39 @@ medusaIntegrationTestRunner({
         expect(sent).toHaveBeenCalledTimes(1)
       })
 
+      it("names a configured shipping option that does not exist", async () => {
+        process.env.VOUCHER_TEST_SHIPPING_OPTION_ID = "so_missing_voucher_option"
+        const error = logged("error")
+        const order = await paidVoucherOrder(1)
+
+        await deliver(order.id)
+
+        const messages = error.mock.calls.map(([message]) => message).join("\n")
+        expect(messages).toContain(
+          'Shipping option so_missing_voucher_option, set in the "delivery.fulfillment.shippingOptionId" option, was not found'
+        )
+        expect((await orderFulfillment(getContainer(), order.id)).fulfillments).toEqual([])
+      })
+
+      it("names the order's shipping option when it no longer exists", async () => {
+        const error = logged("error")
+        const order = await paidVoucherOrder(1)
+        await getContainer().resolve(Modules.ORDER).createOrderShippingMethods({
+          order_id: order.id,
+          name: "Removed option",
+          amount: 0,
+          shipping_option_id: "so_removed_order_option",
+        })
+
+        await deliver(order.id)
+
+        const messages = error.mock.calls.map(([message]) => message).join("\n")
+        expect(messages).toContain(
+          `Shipping option so_removed_order_option, from the shipping method of order ${order.id}, was not found`
+        )
+        expect((await orderFulfillment(getContainer(), order.id)).fulfillments).toEqual([])
+      })
+
       it("creates no second fulfillment when delivery or the job runs again", async () => {
         await useShippingOption()
         const order = await paidVoucherOrder(2)

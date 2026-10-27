@@ -117,14 +117,30 @@ export async function applyVoucherFulfillment(container: MedusaContainer, state:
 
   if (state.to_create.length) {
     const service: VoucherModuleService = container.resolve(VOUCHER_MODULE)
-    const shippingOptionId =
-      (await service.getDeliverySettings()).shippingOptionId ?? state.order_shipping_option_id
+    const configuredId = (await service.getDeliverySettings()).shippingOptionId
+    const shippingOptionId = configuredId ?? state.order_shipping_option_id
 
     // Medusa would otherwise look the option up without an id.
     if (!shippingOptionId) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
         `Order ${state.order_id} has no shipping method; set the "delivery.fulfillment.shippingOptionId" option to fulfill its Voucher lines`
+      )
+    }
+
+    // Medusa fails on a missing option with a message that does not name it.
+    const { data: options } = await container
+      .resolve(ContainerRegistrationKeys.QUERY)
+      .graph({ entity: "shipping_option", fields: ["id"], filters: { id: shippingOptionId } })
+
+    if (!options.length) {
+      const source = configuredId
+        ? 'set in the "delivery.fulfillment.shippingOptionId" option'
+        : `from the shipping method of order ${state.order_id}`
+
+      throw new MedusaError(
+        MedusaError.Types.NOT_FOUND,
+        `Shipping option ${shippingOptionId}, ${source}, was not found`
       )
     }
 
