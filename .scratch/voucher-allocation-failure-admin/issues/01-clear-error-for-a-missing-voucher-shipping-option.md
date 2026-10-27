@@ -10,7 +10,7 @@
 - [x] Without the option and with an order whose shipping method's option no longer exists, the logged error names that id and says it is the order's shipping method (HTTP test)
 - [x] The Delivery stays `delivered`, no fulfillment is made, and the retry job records it once the setting is fixed (existing behaviour, still passing)
 - [x] README's fulfillment section mentions the message
-- [x] Checked on the dev host: a wrong id in `.env` gives the new message in the backend log (rule 13)
+- [x] Checked on the dev host: a wrong id gives the new message in the log (rule 13; through the host's retry script with the id set inline, not the running backend, see Comments)
 
 ## Comments
 
