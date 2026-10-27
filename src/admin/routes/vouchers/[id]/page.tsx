@@ -388,7 +388,11 @@ const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: Voucher
             }),
             failureColumns.accessor("resolution_note", {
               header: t("failures.note"),
-              cell: ({ getValue }) => getValue() ?? "-",
+              // The system's own note is stored in English; show it in the admin's language.
+              cell: ({ getValue, row }) =>
+                row.original.resolved_by === ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM
+                  ? t("failures.systemNote")
+                  : getValue() ?? "-",
             }),
           ]),
     ],

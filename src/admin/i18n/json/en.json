@@ -47,6 +47,7 @@
     "settledBy": "By",
     "note": "Note",
     "system": "System",
+    "systemNote": "Vouchers allocated",
     "noneWaiting": "No orders are waiting for Vouchers.",
     "noneSettled": "No settled orders yet."
   },

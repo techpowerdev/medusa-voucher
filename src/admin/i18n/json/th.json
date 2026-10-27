@@ -47,6 +47,7 @@
     "settledBy": "โดย",
     "note": "บันทึก",
     "system": "ระบบ",
+    "systemNote": "จัด Voucher ให้แล้ว",
     "noneWaiting": "ไม่มีคำสั่งซื้อที่รอ Voucher",
     "noneSettled": "ยังไม่มีคำสั่งซื้อที่จัดการแล้ว"
   },
