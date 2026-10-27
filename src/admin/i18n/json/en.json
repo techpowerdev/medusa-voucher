@@ -81,7 +81,13 @@
       "code_repeated_in_file": "Line {{line}}: the code repeats an earlier line of the file",
       "code_already_stored": "Line {{line}}: the code is already stored"
     },
-    "moreProblems": "and {{more}} more"
+    "moreProblems": "and {{more}} more",
+    "retry": {
+      "served": "Allocated Vouchers to {{allocated}} waiting orders.",
+      "stillOpen": "{{stillOpen}} orders still wait for Vouchers.",
+      "failed": "{{failed}} orders could not be tried; see the server log.",
+      "notRun": "The waiting orders were not retried. Retry them from this Voucher product's page."
+    }
   },
   "widget": {
     "title": "Voucher product",

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next"
 import { useParams } from "react-router-dom"
 import * as zod from "zod"
 import { countCsvRows } from "../../../../lib/csv"
+import { describeImportAllocationRetry } from "../../../../lib/import-allocation-retry"
 import { describeImportFailure, ImportFailureView } from "../../../../lib/import-problems"
 import {
   importVoucherBatch,
@@ -97,6 +98,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
           ["voucher-batch-options", voucherProductId],
           ["pool-vouchers", voucherProductId],
           ["voucher-products"],
+          ["voucher-allocation-failures"],
         ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
       ),
   })
@@ -135,8 +137,17 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
         csv: file.csv,
       },
       {
-        onSuccess: ({ imported }) => {
-          toast.success(t("import.success", { imported: number(imported) }))
+        onSuccess: ({ imported, allocation_retry }) => {
+          const title = t("import.success", { imported: number(imported) })
+          const retry = describeImportAllocationRetry(allocation_retry, number)
+          const description = retry?.lines.map(({ key, values }) => t(key, values)).join(" ")
+
+          if (retry?.level === "warning") {
+            toast.warning(title, { description })
+          } else {
+            toast.success(title, { description })
+          }
+
           handleSuccess()
         },
         onError: (error) => setFailure(describeImportFailure(error, number)),
