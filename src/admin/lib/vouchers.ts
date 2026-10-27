@@ -1,6 +1,7 @@
 import type { AllocationFailureStatus } from "../../modules/voucher/constants"
 import type { PoolCounts, PoolStatus } from "../../modules/voucher/types"
 import { backendUrl, sdk } from "./client"
+import type { RetryAllocationFailuresResult } from "./allocation-retry"
 import type { ImportFailure, ImportProblem } from "./import-problems"
 import type { ImportAllocationRetry } from "./import-allocation-retry"
 
@@ -180,4 +181,18 @@ export const listAllocationFailures = (
   sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
     "/admin/voucher-allocation-failures",
     { query: { ...query, voucher_product_id: voucherProductId } }
+  )
+
+// Tries the waiting orders of a Voucher product again, after its Pool has grown.
+export const retryAllocationFailures = (voucherProductId: string) =>
+  sdk.client.fetch<RetryAllocationFailuresResult>(
+    `/admin/voucher-products/${voucherProductId}/retry-allocation-failures`,
+    { method: "POST" }
+  )
+
+// Closes one waiting order settled another way, such as a refund on the order page.
+export const resolveAllocationFailure = (id: string, note: string) =>
+  sdk.client.fetch<{ voucher_allocation_failure: AllocationFailure }>(
+    `/admin/voucher-allocation-failures/${id}/resolve`,
+    { method: "POST", body: { note } }
   )

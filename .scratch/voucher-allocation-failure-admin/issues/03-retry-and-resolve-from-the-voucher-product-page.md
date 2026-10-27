@@ -4,10 +4,10 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done (PR #63)
 
-- [ ] Retry calls `POST /admin/voucher-products/:id/retry-allocation-failures` and shows the three counts; the section refreshes
-- [ ] Resolve requires a note, confirms with the no-refund warning, calls `POST /admin/voucher-allocation-failures/:id/resolve`, and the row moves to settled
-- [ ] Errors from either route are shown the dashboard's way (rule 14)
-- [ ] Any wording logic pulled out of the component has a unit test (`src/admin/lib/__tests__`)
-- [ ] Checked on the dev host with screenshots: retry after importing a batch serves a waiting order; resolving another with a note (rule 13)
+- [x] Retry calls `POST /admin/voucher-products/:id/retry-allocation-failures` and shows the three counts; the section refreshes
+- [x] Resolve requires a note, confirms with the no-refund warning, calls `POST /admin/voucher-allocation-failures/:id/resolve`, and the row moves to settled
+- [x] Errors from either route are shown the dashboard's way (rule 14)
+- [x] Any wording logic pulled out of the component has a unit test (`src/admin/lib/__tests__`)
+- [x] Checked on the dev host with screenshots: retry after importing a batch serves a waiting order; resolving another with a note (rule 13)
