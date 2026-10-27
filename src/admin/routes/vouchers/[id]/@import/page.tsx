@@ -98,6 +98,7 @@ const ImportForm = ({ voucherProductId }: { voucherProductId: string }) => {
           ["voucher-batch-options", voucherProductId],
           ["pool-vouchers", voucherProductId],
           ["voucher-products"],
+          ["voucher-allocation-failures"],
         ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
       ),
   })
