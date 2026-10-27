@@ -4,10 +4,10 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (PR #59)
 
-- [ ] `GET /admin/voucher-allocation-failures` returns each failure's order `display_id` and `email`, and still no secret (HTTP test in `allocation-failures-admin.spec.ts`)
-- [ ] The section is built with the dashboard's `DataTable`, hooks and translations (rule 14), with its filter and pages kept in the URL
-- [ ] English and Thai labels follow the spec's words; never "out of stock" or "failed order"
-- [ ] README's Allocation failures section mentions the admin section and the new fields
-- [ ] Checked on the dev host with screenshots: an order bought while the Pool is empty appears as waiting; a resolved one appears under settled (rule 13)
+- [x] `GET /admin/voucher-allocation-failures` returns each failure's order `display_id` and `email`, and still no secret (HTTP test in `allocation-failures-admin.spec.ts`)
+- [x] The section is built with the dashboard's `DataTable`, hooks and translations (rule 14), with its filter and pages kept in the URL
+- [x] English and Thai labels follow the spec's words; never "out of stock" or "failed order"
+- [x] README's Allocation failures section mentions the admin section and the new fields
+- [x] Checked on the dev host with screenshots: an order bought while the Pool is empty appears as waiting; a resolved one appears under settled (rule 13)

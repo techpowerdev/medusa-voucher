@@ -90,11 +90,13 @@ A scheduled job, `recover-unallocated-voucher-orders`, runs every 15 minutes and
 
 When a Voucher product's Pool cannot cover a Paid order, nothing is allocated and an open Allocation failure is recorded for each short line. The store keeps selling a Voucher product whose Pool is empty, so this is how a sale beyond the Pool is settled: by importing more Vouchers and retrying, or by refunding the order and resolving the failure ([ADR-0006](./docs/adr/0006-sell-beyond-the-pool-and-settle-allocation-failures-afterwards.md)). After importing more Vouchers, an operator retries them (admin authentication):
 
-- `GET /admin/voucher-allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded.
+- `GET /admin/voucher-allocation-failures` lists failures, open by default (`status=resolved` for the others), oldest first, optionally for one `voucher_product_id`, with `limit` and `offset`. Each shows the order, its line item, the Voucher product, the units requested and the units available when it was recorded, and the order's `display_id` and `email`, read from Medusa's order.
 - `POST /admin/voucher-products/:id/retry-allocation-failures` tries each order waiting on that Voucher product once, oldest first, with the same all-or-none rule and the Paid order check as a new order, and returns `{ allocated, still_open, failed }` (order ids). An order also short on another Voucher product, or refunded or canceled while it waited, stays open. An order whose allocation throws is logged as an error and listed in `failed`; the others are still tried.
 - `POST /admin/voucher-allocation-failures/:id/resolve` with a `note` closes one failure settled another way (a refund, for example) and records the admin and the time. A failure already resolved is refused (422); an unknown one is 404.
 
 An order that gets its Vouchers by any route (a retry, a subscriber or the recovery job) has its open failures resolved automatically, with `resolved_by` set to `system`.
+
+In the admin, each Voucher product's page shows these orders after its Pool, in a section called "Allocation failures" ("คำสั่งซื้อที่รอ Voucher" in Thai), with a filter between waiting and settled orders. A waiting order shows its display number linking to the order, the customer's email, the units requested and available when it failed, and the date, oldest first; a settled one shows when it was settled, by which admin or by the system, and the note.
 
 Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 

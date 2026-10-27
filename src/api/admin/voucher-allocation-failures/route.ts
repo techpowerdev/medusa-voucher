@@ -5,7 +5,8 @@ import VoucherModuleService from "../../../modules/voucher/service"
 import { ListAllocationFailuresQuery } from "./middlewares"
 
 // An Allocation failure as the admin API shows it: no Voucher is involved, so no secret can
-// appear, and the Voucher product stands in for the variant it was recorded with.
+// appear, the Voucher product stands in for the variant it was recorded with, and the order's
+// display number and email are read from Medusa's order.
 const FIELDS = [
   "id",
   "order_id",
@@ -54,10 +55,21 @@ export const GET = async (
         }
       )
 
+  const { data: orders } = failures.length
+    ? await query.graph({
+        entity: "order",
+        fields: ["id", "display_id", "email"],
+        filters: { id: [...new Set(failures.map((failure) => failure.order_id))] },
+      })
+    : { data: [] }
+  const orderById = new Map(orders.map((order) => [order.id, order]))
+
   res.json({
     voucher_allocation_failures: failures.map(({ variant_id, ...failure }) => ({
       ...failure,
       voucher_product_id: voucherProductByVariant.get(variant_id) ?? null,
+      display_id: orderById.get(failure.order_id)?.display_id ?? null,
+      email: orderById.get(failure.order_id)?.email ?? null,
     })),
     count,
     limit: req.queryConfig.pagination.take,
