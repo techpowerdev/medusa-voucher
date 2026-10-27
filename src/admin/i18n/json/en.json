@@ -49,7 +49,19 @@
     "system": "System",
     "systemNote": "Vouchers allocated",
     "noneWaiting": "No orders are waiting for Vouchers.",
-    "noneSettled": "No settled orders yet."
+    "noneSettled": "No settled orders yet.",
+    "retry": {
+      "action": "Retry waiting orders",
+      "done": "Retry finished",
+      "result": "Got their Vouchers: {{allocated}} · Still waiting: {{still_open}} · Could not be tried: {{failed}}",
+      "noneWaiting": "No orders were waiting for Vouchers."
+    },
+    "resolve": {
+      "action": "Resolve",
+      "description": "Order #{{order}} will stop waiting for Vouchers, and this cannot be undone. Resolving does not refund the customer: refund the order on its order page.",
+      "noteHint": "Say how the order was settled, for example that it was refunded.",
+      "success": "Order #{{order}} resolved"
+    }
   },
   "import": {
     "action": "Import CSV",

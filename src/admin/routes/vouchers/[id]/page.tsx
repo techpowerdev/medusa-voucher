@@ -1,19 +1,25 @@
 import { DataTable } from "@medusajs/dashboard/components"
 import { useDate, useQueryParams, useUser } from "@medusajs/dashboard/hooks"
 import { getLocaleAmount } from "@medusajs/dashboard/lib"
+import { CheckCircle } from "@medusajs/icons"
 import {
   Avatar,
   Container,
   createDataTableColumnHelper,
   createDataTableFilterHelper,
   Heading,
+  Label,
+  Prompt,
   StatusBadge,
   Text,
+  Textarea,
+  toast,
 } from "@medusajs/ui"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
+import { keepPreviousData, QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { FormEvent, useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Link, Outlet, UIMatch, useParams } from "react-router-dom"
+import { describeRetryResult } from "../../../lib/allocation-retry"
 import {
   ALLOCATION_FAILURE_RESOLVED_BY_SYSTEM,
   AllocationFailure,
@@ -25,7 +31,9 @@ import {
   PoolCounts,
   PoolStatus,
   PoolVoucher,
+  resolveAllocationFailure,
   retrieveVoucherProduct,
+  retryAllocationFailures,
   statusColor,
   VOUCHER_NS,
   VoucherBatch,
@@ -311,9 +319,120 @@ const ResolvedBy = ({ actor }: { actor: string | null }) => {
   )
 }
 
-const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
+// A retry or a resolve changes the waiting orders and, for a retry, the Pool, so the page and
+// the Vouchers list read them again.
+const refreshAfterSettling = (queryClient: QueryClient, voucherProductId: string) =>
+  Promise.all(
+    [
+      ["voucher-allocation-failures"],
+      ["voucher-product", voucherProductId],
+      ["voucher-batches", voucherProductId],
+      ["pool-vouchers", voucherProductId],
+      ["voucher-products"],
+    ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+  )
+
+// The order a failure waits on, by its display number when the order still has one.
+const orderLabel = (failure: AllocationFailure) => failure.display_id ?? failure.order_id
+
+// Asks for the note a resolve requires, in the dashboard's prompt, with a text area where the
+// dashboard's own `usePrompt` only offers a line to type a given word.
+const ResolvePrompt = ({
+  failure,
+  voucherProductId,
+  onClose,
+}: {
+  failure: AllocationFailure
+  voucherProductId: string
+  onClose: () => void
+}) => {
   const { t } = useTranslation(VOUCHER_NS)
+  const { t: tDashboard } = useTranslation()
+  const queryClient = useQueryClient()
+  const [note, setNote] = useState("")
+
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: () => resolveAllocationFailure(failure.id, note.trim()),
+    onSuccess: () => refreshAfterSettling(queryClient, voucherProductId),
+  })
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
+
+    if (!note.trim()) {
+      return
+    }
+
+    await mutateAsync(undefined, {
+      onSuccess: () => {
+        toast.success(t("failures.resolve.success", { order: orderLabel(failure) }))
+        onClose()
+      },
+      onError: (error) => toast.error(error.message),
+    })
+  }
+
+  return (
+    // Kept open until the resolve ends; Escape closes it as it closes the dashboard's prompt.
+    <Prompt open variant="confirmation">
+      <Prompt.Content onEscapeKeyDown={() => !isPending && onClose()}>
+        <form onSubmit={handleSubmit}>
+          <Prompt.Header>
+            <Prompt.Title>{tDashboard("general.areYouSure")}</Prompt.Title>
+            <Prompt.Description>
+              {t("failures.resolve.description", { order: orderLabel(failure) })}
+            </Prompt.Description>
+          </Prompt.Header>
+          <div className="border-ui-border-base mt-6 flex flex-col gap-y-2 border-y p-6">
+            <Label htmlFor="resolution-note" className="text-ui-fg-subtle">
+              {t("failures.note")}
+            </Label>
+            <Textarea
+              id="resolution-note"
+              autoFocus
+              rows={3}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+            />
+            <Text size="small" className="text-ui-fg-subtle">
+              {t("failures.resolve.noteHint")}
+            </Text>
+          </div>
+          <Prompt.Footer>
+            <Prompt.Cancel type="button" onClick={onClose} disabled={isPending}>
+              {tDashboard("actions.cancel")}
+            </Prompt.Cancel>
+            <Prompt.Action type="submit" disabled={!note.trim() || isPending}>
+              {t("failures.resolve.action")}
+            </Prompt.Action>
+          </Prompt.Footer>
+        </form>
+      </Prompt.Content>
+    </Prompt>
+  )
+}
+
+const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: VoucherProduct }) => {
+  const { t, i18n } = useTranslation(VOUCHER_NS)
   const { getFullDate } = useDate()
+  const queryClient = useQueryClient()
+  const [resolving, setResolving] = useState<AllocationFailure>()
+
+  const retry = useMutation({
+    mutationFn: () => retryAllocationFailures(voucherProduct.id),
+    onSuccess: () => refreshAfterSettling(queryClient, voucherProduct.id),
+  })
+
+  const handleRetry = () =>
+    retry.mutate(undefined, {
+      onSuccess: (result) => {
+        const { variant, key, values } = describeRetryResult(result, (value) =>
+          value.toLocaleString(i18n.language)
+        )
+        toast[variant](t("failures.retry.done"), { description: t(key, values) })
+      },
+      onError: (error) => toast.error(error.message),
+    })
   const { offset, status } = useQueryParams(["offset", "status"], FAILURES_PREFIX)
   // Without a filter the section shows the orders still waiting, as the API does.
   const failureStatus = filterValue<AllocationFailureStatus>(status) ?? AllocationFailureStatus.OPEN
@@ -372,6 +491,16 @@ const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: Voucher
               header: t("failures.date"),
               cell: ({ getValue }) => getFullDate({ date: getValue(), includeTime: true }),
             }),
+            // A settled order cannot be reopened, so only waiting rows have an action.
+            failureColumns.action({
+              actions: [
+                {
+                  label: t("failures.resolve.action"),
+                  icon: <CheckCircle />,
+                  onClick: ({ row }) => setResolving(row.original),
+                },
+              ],
+            }),
           ]
         : [
             failureColumns.accessor("resolved_at", {
@@ -417,6 +546,11 @@ const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: Voucher
         isLoading={isPending}
         heading={t("failures.title")}
         headingLevel="h2"
+        action={{
+          label: t("failures.retry.action"),
+          onClick: handleRetry,
+          disabled: retry.isPending,
+        }}
         emptyState={{
           empty: { heading: t("failures.noneWaiting") },
           filtered: {
@@ -427,6 +561,13 @@ const AllocationFailuresSection = ({ voucherProduct }: { voucherProduct: Voucher
           },
         }}
       />
+      {resolving && (
+        <ResolvePrompt
+          failure={resolving}
+          voucherProductId={voucherProduct.id}
+          onClose={() => setResolving(undefined)}
+        />
+      )}
     </Container>
   )
 }
