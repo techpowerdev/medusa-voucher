@@ -4,10 +4,14 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** done (PR #57)
 
-- [ ] With `delivery.fulfillment.shippingOptionId` set to an id that does not exist, the logged error names that id and the option (HTTP test in `voucher-fulfillment.spec.ts`)
-- [ ] Without the option and with an order whose shipping method's option no longer exists, the logged error names that id and says it is the order's shipping method (HTTP test)
-- [ ] The Delivery stays `delivered`, no fulfillment is made, and the retry job records it once the setting is fixed (existing behaviour, still passing)
-- [ ] README's fulfillment section mentions the message
-- [ ] Checked on the dev host: a wrong id in `.env` gives the new message in the backend log (rule 13)
+- [x] With `delivery.fulfillment.shippingOptionId` set to an id that does not exist, the logged error names that id and the option (HTTP test in `voucher-fulfillment.spec.ts`)
+- [x] Without the option and with an order whose shipping method's option no longer exists, the logged error names that id and says it is the order's shipping method (HTTP test)
+- [x] The Delivery stays `delivered`, no fulfillment is made, and the retry job records it once the setting is fixed (existing behaviour, still passing)
+- [x] README's fulfillment section mentions the message
+- [x] Checked on the dev host: a wrong id in `.env` gives the new message in the backend log (rule 13)
+
+## Comments
+
+- 2026-10-27, PR #57: the screen check used the host's `retry-voucher-deliveries.ts` script with `VOUCHER_SHIPPING_OPTION_ID` set inline to a wrong id (the backend's email first failed because Mailpit was down), then again with the `.env` value, which fulfilled the order. The second HTTP test passed on its first run (the first test's change covered it).
