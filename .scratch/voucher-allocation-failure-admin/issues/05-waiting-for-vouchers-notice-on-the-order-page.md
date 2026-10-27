@@ -4,9 +4,9 @@
 
 **Blocked by:** None (can start immediately). Touches the same list route as 02 (a different part); rebase on whichever merges first.
 
-**Status:** ready-for-agent
+**Status:** done (PR #58)
 
 - [x] `GET /admin/voucher-allocation-failures?order_id=…` returns only that order's failures (HTTP test in `allocation-failures-admin.spec.ts`)
 - [x] The widget shows nothing for an order without an open failure, and a notice with each Voucher product, the units and a link otherwise, in English and Thai
 - [x] README mentions the widget and the filter
-- [ ] Checked on the dev host with screenshots: an order waiting for Vouchers and one that is not (rule 13)
+- [x] Checked on the dev host with screenshots: an order waiting for Vouchers and one that is not (rule 13)
