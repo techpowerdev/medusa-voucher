@@ -62,6 +62,22 @@ export const listPoolVouchers = (
     query,
   })
 
+export type AllocationFailure = {
+  id: string
+  order_id: string
+  order_line_item_id: string
+  voucher_product_id: string | null
+  quantity_requested: number
+  quantity_available: number
+}
+
+// An order's open Allocation failures: one per line it is short of, so one page holds them all.
+export const listOrderAllocationFailures = (orderId: string) =>
+  sdk.client.fetch<{ voucher_allocation_failures: AllocationFailure[]; count: number }>(
+    "/admin/voucher-allocation-failures",
+    { query: { order_id: orderId, status: "open", limit: 100 } }
+  )
+
 // The Voucher product a variant is marked as, if any, read through the variant's link.
 export const retrieveVariantVoucherProductId = async (productId: string, variantId: string) => {
   const { variant } = await sdk.admin.product.retrieveVariant(productId, variantId, {

@@ -98,6 +98,8 @@ An order that gets its Vouchers by any route (a retry, a subscriber or the recov
 
 In the admin, each Voucher product's page shows these orders after its Pool, in a section called "Allocation failures" ("คำสั่งซื้อที่รอ Voucher" in Thai), with a filter between waiting and settled orders. A waiting order shows its display number linking to the order, the customer's email, the units requested and available when it failed, and the date, oldest first; a settled one shows when it was settled, by which admin or by the system, and the note.
 
+In the admin, an order's page shows an **Allocation failures** box (Thai: "คำสั่งซื้อนี้รอ Voucher") while the order has an open Allocation failure: each Voucher product it is short of, by its Medusa product and variant, with the units requested and available and a link to the Voucher product's page, where the order can be settled. It has no actions and shows nothing for other orders. It reads `GET /admin/voucher-allocation-failures?order_id=…`, which lists only that order's failures.
+
 Known gaps: an order captured more than 7 days after it was placed, whose subscriber also failed, is not recovered; orders paid before the plugin was installed, and Voucher lines added to an order after it was allocated, are not allocated.
 
 ## Delivering vouchers

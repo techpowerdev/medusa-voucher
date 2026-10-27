@@ -97,5 +97,11 @@
     "faceValueRequired": "ใส่มูลค่าหน้าบัตรที่มากกว่า 0",
     "currencyRequired": "เลือกสกุลเงิน",
     "loadFailed": "โหลดข้อมูล Voucher product ไม่สำเร็จ โหลดหน้าใหม่เพื่อลองอีกครั้ง"
+  },
+  "orderWidget": {
+    "title": "คำสั่งซื้อนี้รอ Voucher",
+    "hint": "คำสั่งซื้อนี้ชำระเงินแล้ว แต่ Pool มี Voucher พร้อมขายไม่พอ นำเข้า Voucher แล้วลองจัดใหม่ หรือคืนเงินแล้วปิดรายการ ได้ที่หน้าของ Voucher product",
+    "units": "สั่ง {{requested}} มีให้ {{available}}",
+    "loadFailed": "โหลดรายการรอ Voucher ของคำสั่งซื้อนี้ไม่สำเร็จ โหลดหน้าใหม่เพื่อลองอีกครั้ง"
   }
 }

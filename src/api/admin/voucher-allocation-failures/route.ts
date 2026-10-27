@@ -27,7 +27,7 @@ export const GET = async (
 ) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   const service: VoucherModuleService = req.scope.resolve(VOUCHER_MODULE)
-  const { status, voucher_product_id } = req.validatedQuery
+  const { status, voucher_product_id, order_id } = req.validatedQuery
 
   const { data: voucherProducts } = await query.graph({
     entity: "voucher_product",
@@ -45,6 +45,7 @@ export const GET = async (
     : await service.listAndCountVoucherAllocationFailures(
         {
           status,
+          ...(order_id ? { order_id } : {}),
           ...(voucher_product_id ? { variant_id: [...voucherProductByVariant.keys()] } : {}),
         },
         {

@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] `GET /admin/voucher-allocation-failures?order_id=…` returns only that order's failures (HTTP test in `allocation-failures-admin.spec.ts`)
-- [ ] The widget shows nothing for an order without an open failure, and a notice with each Voucher product, the units and a link otherwise, in English and Thai
-- [ ] README mentions the widget and the filter
+- [x] `GET /admin/voucher-allocation-failures?order_id=…` returns only that order's failures (HTTP test in `allocation-failures-admin.spec.ts`)
+- [x] The widget shows nothing for an order without an open failure, and a notice with each Voucher product, the units and a link otherwise, in English and Thai
+- [x] README mentions the widget and the filter
 - [ ] Checked on the dev host with screenshots: an order waiting for Vouchers and one that is not (rule 13)
